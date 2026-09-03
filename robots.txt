@@ -5,6 +5,9 @@
 
 User-agent: *
 Disallow: /
+# Reachable so Google's OAuth consent-screen review can fetch them.
+Allow: /privacy.html
+Allow: /terms.html
 
 # Named explicitly as well — some crawlers honour their own token more reliably
 # than the wildcard.
