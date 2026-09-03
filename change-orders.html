@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Change Order — Renew Home Exteriors</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f7;color:#1e2a38;min-height:100vh}
+header{background:#1a3a5c;color:#fff;padding:14px 24px;display:flex;align-items:center;gap:16px}
+header h1{font-size:17px;font-weight:800;letter-spacing:-.5px}
+header .sub{font-size:11px;color:#93b4d0;margin-top:2px}
+.badge{background:#e8a020;color:#fff;font-size:10px;font-weight:800;padding:3px 9px;border-radius:12px;letter-spacing:.5px}
+.container{max-width:1000px;margin:24px auto;padding:0 16px;display:flex;flex-direction:column;gap:20px}
+.card{background:#fff;border-radius:10px;box-shadow:0 1px 6px rgba(0,0,0,.1);padding:22px 24px}
+.card-title{font-size:13px;font-weight:700;color:#1a3a5c;text-transform:uppercase;letter-spacing:.5px;margin-bottom:16px;border-bottom:2px solid #e8edf5;padding-bottom:8px}
+.info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.info-item label{font-size:10px;font-weight:700;color:#6b7a90;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px}
+.info-item .val{font-size:14px;font-weight:600;color:#1e2a38}
+.info-item .val.mono{font-family:monospace;font-size:13px}
+textarea,input[type=text],input[type=number],select{width:100%;border:1.5px solid #d5dae5;border-radius:6px;padding:8px 10px;font-size:13px;font-family:inherit;color:#1e2a38;outline:none;transition:border .2s}
+textarea:focus,input[type=text]:focus,input[type=number]:focus,select:focus{border-color:#1a3a5c}
+textarea{resize:vertical;min-height:70px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-row.single{grid-template-columns:1fr}
+.form-group label{font-size:11px;font-weight:700;color:#6b7a90;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px}
+.items-table{width:100%;border-collapse:collapse;font-size:13px}
+.items-table th{background:#f4f7fb;color:#6b7a90;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;text-align:left;border-bottom:2px solid #e8edf5}
+.items-table td{padding:8px 10px;border-bottom:1px solid #eef2f8;vertical-align:middle}
+.items-table tr:hover td{background:#f9fbff}
+.item-name{font-weight:600}
+.item-tag{display:inline-block;font-size:9px;font-weight:800;padding:2px 6px;border-radius:10px;margin-left:6px;vertical-align:middle}
+.tag-added{background:#d4edda;color:#155724}
+.tag-removed{background:#f8d7da;color:#721c24}
+.tag-modified{background:#fff3cd;color:#856404}
+.qty-input{width:70px;text-align:center}
+.price-input{width:90px;text-align:right}
+.line-total{font-weight:700;color:#1a3a5c;text-align:right}
+.line-total.negative{color:#c0392b}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:.15s}
+.btn-primary{background:#1a3a5c;color:#fff}
+.btn-primary:hover{background:#223f66}
+.btn-green{background:#2e7d32;color:#fff}
+.btn-green:hover{background:#1b5e20}
+.btn-outline{background:#fff;border:1.5px solid #c8d0dc;color:#1a3a5c}
+.btn-outline:hover{background:#f4f7fb}
+.btn-sm{padding:5px 11px;font-size:11px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.totals-box{background:#f4f7fb;border-radius:8px;padding:16px 20px;margin-top:16px}
+.totals-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:13px}
+.totals-row.grand{font-size:15px;font-weight:800;border-top:2px solid #c8d0dc;margin-top:6px;padding-top:10px}
+.totals-row.delta-pos{color:#2e7d32;font-weight:700}
+.totals-row.delta-neg{color:#c0392b;font-weight:700}
+.add-product-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid #eef2f8}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:none;align-items:center;justify-content:center}
+.overlay.open{display:flex}
+.modal{background:#fff;border-radius:12px;padding:28px;max-width:480px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2)}
+.modal h3{font-size:16px;font-weight:800;color:#1a3a5c;margin-bottom:16px}
+.modal .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.alert{padding:12px 16px;border-radius:7px;font-size:13px;margin-bottom:14px}
+.alert-danger{background:#f8d7da;color:#721c24;border:1px solid #f5c6cb}
+.alert-success{background:#d4edda;color:#155724;border:1px solid #c3e6cb}
+#loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.9);z-index:200;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px}
+#loading-overlay .sp{width:40px;height:40px;border:4px solid #e8edf5;border-top-color:#1a3a5c;border-radius:50%;animation:spin .8s linear infinite}
+#loading-overlay p{color:#6b7a90;font-size:14px}
+.co-number{background:#1a3a5c;color:#fff;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:700;font-family:monospace}
+.sig-status{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:10px}
+.sig-draft{background:#e2e3e5;color:#383d41}
+.sig-sent{background:#cce5ff;color:#004085}
+.sig-signed{background:#d4edda;color:#155724}
+</style>
+</head>
+<body>
+
+<div id="loading-overlay">
+  <div class="sp"></div>
+  <p id="loading-msg">Loading quote…</p>
+</div>
+
+<header>
+  <div>
+    <h1>RENEW HOME EXTERIORS</h1>
+    <div class="sub">Roofing &bull; Siding &bull; Windows &bull; Doors</div>
+  </div>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+    <span class="badge">CHANGE ORDER</span>
+    <span id="co-number-badge" class="co-number" style="display:none"></span>
+  </div>
+</header>
+
+<nav style="background:#132d4a;display:flex;gap:0;padding:0 28px;border-bottom:1px solid rgba(255,255,255,0.1)">
+  <a href="PricingEstimator.html"
+     style="color:rgba(255,255,255,0.6);text-decoration:none;padding:10px 18px;font-size:13px;font-weight:600;border-bottom:3px solid transparent;transition:color 0.15s"
+     onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.6)'">📋 Estimator</a>
+  <a href="quotes.html"
+     style="color:rgba(255,255,255,0.6);text-decoration:none;padding:10px 18px;font-size:13px;font-weight:600;border-bottom:3px solid transparent;transition:color 0.15s"
+     onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.6)'">📚 Quote History</a>
+  <a href="change-orders.html"
+     style="color:#fff;text-decoration:none;padding:10px 18px;font-size:13px;font-weight:700;border-bottom:3px solid #e8500a;letter-spacing:0.2px">🔄 Change Orders</a>
+</nav>
+
+<div class="container">
+
+  <div id="alert-area" style="display:none"></div>
+
+  <!-- Sign-in gate (shown when not authenticated) -->
+  <div class="card" id="sign-in-gate" style="display:none;text-align:center;padding:40px 24px">
+    <div style="font-size:40px;margin-bottom:16px">🔐</div>
+    <div style="font-size:18px;font-weight:800;color:#1a3a5c;margin-bottom:8px">Sign In Required</div>
+    <p style="font-size:13px;color:#6b7a90;margin-bottom:24px">You need to sign in to search quotes and create change orders.</p>
+    <button onclick="signInGoogle()" style="background:#1a3a5c;color:#fff;border:none;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">
+      Sign in with Google
+    </button>
+  </div>
+
+  <!-- Quote Picker (shown when no quote_id in URL) -->
+  <div class="card" id="quote-picker" style="display:none">
+    <div class="card-title">Select Quote</div>
+    <p style="font-size:13px;color:#6b7a90;margin-bottom:14px">Search by customer name or quote number to create a change order.</p>
+    <div style="position:relative">
+      <input type="text" id="quote-search-input" placeholder="Customer name or quote #…" oninput="searchQuotes()" autocomplete="off"
+        style="padding-right:36px">
+      <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);color:#aaa;font-size:16px">🔍</span>
+    </div>
+    <div id="quote-search-results" style="margin-top:8px;border:1.5px solid #e8edf5;border-radius:7px;overflow:hidden;display:none"></div>
+  </div>
+
+  <!-- Original Quote Summary -->
+  <div class="card" id="quote-summary-card" style="display:none">
+    <div class="card-title">Original Quote</div>
+    <div class="info-grid">
+      <div class="info-item"><label>Quote #</label><div class="val mono" id="q-num">—</div></div>
+      <div class="info-item"><label>Customer</label><div class="val" id="q-customer">—</div></div>
+      <div class="info-item"><label>Address</label><div class="val" id="q-address">—</div></div>
+      <div class="info-item"><label>Template</label><div class="val" id="q-template">—</div></div>
+      <div class="info-item"><label>Original Total</label><div class="val" id="q-total" style="color:#1a3a5c;font-size:18px;font-weight:900">—</div></div>
+      <div class="info-item"><label>Status</label><div class="val" id="q-status">—</div></div>
+    </div>
+  </div>
+
+  <!-- Change Order Details -->
+  <div class="card" id="co-details-card" style="display:none">
+    <div class="card-title">Change Order Details</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Change Order #</label>
+        <input type="text" id="co-number" placeholder="e.g. CO-001" readonly style="background:#f4f7fb;cursor:default">
+      </div>
+      <div class="form-group">
+        <label>Short Description / Subject *</label>
+        <input type="text" id="co-description" placeholder="e.g. Add ridge vent, upgrade shingles">
+      </div>
+    </div>
+    <div class="form-row single" style="margin-top:14px">
+      <div class="form-group">
+        <label>Reason for Change *</label>
+        <textarea id="co-reason" placeholder="Explain why this change is being made (scope addition, material upgrade, homeowner request, etc.)"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- Line Items Editor -->
+  <div class="card" id="line-items-card" style="display:none">
+    <div class="card-title">Line Items</div>
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th style="width:42%">Item</th>
+          <th>Unit</th>
+          <th>Qty</th>
+          <th>Unit Price</th>
+          <th>Line Total</th>
+          <th style="width:60px"></th>
+        </tr>
+      </thead>
+      <tbody id="items-tbody"></tbody>
+    </table>
+
+    <!-- Add Product -->
+    <div class="add-product-row" id="add-product-row">
+      <div style="flex:1;min-width:220px;position:relative">
+        <div class="form-group" style="margin:0">
+          <label>Add Product</label>
+          <input type="text" id="product-search" placeholder="Search products…" oninput="filterProducts()" autocomplete="off">
+        </div>
+        <div id="product-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #d5dae5;border-radius:6px;max-height:220px;overflow-y:auto;z-index:50;box-shadow:0 4px 12px rgba(0,0,0,.1)"></div>
+      </div>
+      <div class="form-group" style="margin:0;width:80px">
+        <label>Qty</label>
+        <input type="number" id="add-qty" value="1" min="0.1" step="0.1" style="width:80px">
+      </div>
+      <button class="btn btn-outline" onclick="addSelectedProduct()" style="align-self:flex-end">+ Add</button>
+    </div>
+
+    <!-- Totals -->
+    <div class="totals-box">
+      <div class="totals-row"><span>Original Total</span><span id="tot-original">$0.00</span></div>
+      <div class="totals-row"><span>New Total</span><span id="tot-new" style="font-weight:700">$0.00</span></div>
+      <div class="totals-row grand" id="tot-delta-row"><span>Change (+/-)</span><span id="tot-delta">$0.00</span></div>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="card" id="actions-card" style="display:none;align-items:center;gap:12px;flex-wrap:wrap">
+    <button class="btn btn-primary" onclick="saveDraft()">💾 Save Draft</button>
+    <button class="btn btn-green" id="btn-send" onclick="openSendModal()">✍️ Send for Signature</button>
+    <button class="btn btn-outline" onclick="history.back()">← Back</button>
+    <div style="margin-left:auto;font-size:12px;color:#6b7a90" id="save-status"></div>
+  </div>
+
+</div>
+
+<!-- Send Confirmation Modal -->
+<div class="overlay" id="send-modal">
+  <div class="modal">
+    <h3>Send Change Order for Signature</h3>
+    <p style="font-size:13px;color:#6b7a90;margin-bottom:16px">
+      This will email the change order to the customer for electronic signature.
+    </p>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>Customer Name</label>
+      <input type="text" id="modal-cust-name" placeholder="Customer full name">
+    </div>
+    <div class="form-group">
+      <label>Customer Email</label>
+      <input type="text" id="modal-cust-email" placeholder="customer@example.com">
+    </div>
+    <div id="modal-alert" style="display:none"></div>
+    <div class="actions">
+      <button class="btn btn-outline" onclick="closeSendModal()">Cancel</button>
+      <button class="btn btn-green" id="modal-send-btn" onclick="sendForSignature()">Send Email ✉️</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var SB_URL  = 'https://chnkkcdstxtfnoqelwgz.supabase.co';
+var SB_ANON = 'sb_publishable_cQ1hnPv5r5N6gmJq8CLmMw_rP_RNiSA';
+var TENANT  = '5249f9c0-9fca-46c8-896c-4e35be437024';
+
+var _supa = supabase.createClient(SB_URL, SB_ANON);
+
+var quote         = null;
+var quoteId       = null;
+var coId          = null;
+var lineItems     = [];
+var allProducts   = [];
+var selectedProd  = null;
+var originalTotal = 0;
+var _filtProd     = [];
+var _authToken    = null;  // set from URL param or SDK session
+var _coUserRole   = 'user'; // fetched after auth
+
+// ── Auth ──────────────────────────────────────────────────────
+async function signInGoogle() {
+  await _supa.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.origin + window.location.pathname + window.location.search,
+      queryParams: { prompt: 'select_account' }
+    }
+  });
+}
+
+async function initAuth() {
+  // 1. Token in URL (passed from PricingEstimator)
+  var params = new URLSearchParams(location.search);
+  var urlToken = params.get('token');
+  if (urlToken) { _authToken = urlToken; return; }
+  // 2. Live SDK session — most reliable, auto-refreshes
+  var { data } = await _supa.auth.getSession();
+  if (data && data.session) { _authToken = data.session.access_token; return; }
+  // _authToken stays null — sign-in gate will show
+}
+
+async function getSession() {
+  if (_authToken) return { access_token: _authToken, user: { id: null } };
+  var { data } = await _supa.auth.getSession();
+  return data && data.session ? data.session : null;
+}
+
+async function _getFreshToken() {
+  // 1. Try SDK session (auto-refreshes via refresh token)
+  var { data: sd, error: se } = await _supa.auth.getSession();
+  if (sd && sd.session) return sd.session.access_token;
+  // 2. Try explicit refresh
+  var { data: rd } = await _supa.auth.refreshSession();
+  if (rd && rd.session) { _authToken = rd.session.access_token; return _authToken; }
+  // 3. No valid session — force sign-in
+  _authToken = null;
+  hideLoading();
+  var gate = document.getElementById('sign-in-gate');
+  if (gate) gate.style.display = '';
+  document.getElementById('quote-picker').style.display = 'none';
+  return null;
+}
+
+async function sbFetch(path, opts) {
+  var token = await _getFreshToken();
+  if (!token) throw new Error('Not authenticated');
+  var hdrs = Object.assign({ 'apikey': SB_ANON, 'Content-Type': 'application/json',
+    'Authorization': 'Bearer ' + token }, (opts && opts.headers) || {});
+  var resp = await fetch(SB_URL + path, Object.assign({}, opts || {}, { headers: hdrs }));
+  // On 401, try one token refresh and retry
+  if (resp.status === 401) {
+    var { data: rd } = await _supa.auth.refreshSession();
+    if (rd && rd.session) {
+      _authToken = rd.session.access_token;
+      hdrs['Authorization'] = 'Bearer ' + _authToken;
+      return fetch(SB_URL + path, Object.assign({}, opts || {}, { headers: hdrs }));
+    }
+    // Refresh failed — show sign-in gate
+    _authToken = null;
+    hideLoading();
+    var gate = document.getElementById('sign-in-gate');
+    if (gate) gate.style.display = '';
+    document.getElementById('quote-picker').style.display = 'none';
+  }
+  return resp;
+}
+
+// ── Init ──────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async function() {
+  await initAuth();
+
+  // Not authenticated — show sign-in gate
+  if (!_authToken) {
+    hideLoading();
+    document.getElementById('sign-in-gate').style.display = '';
+    return;
+  }
+
+  // Fetch user role
+  var { data: _rSess } = await _supa.auth.getSession();
+  if (_rSess && _rSess.session) {
+    var _rResp = await sbFetch('/rest/v1/users?select=role&id=eq.' + _rSess.session.user.id + '&limit=1');
+    if (_rResp.ok) {
+      var _rData = await _rResp.json();
+      _coUserRole = _rData?.[0]?.role || 'user';
+    }
+  }
+
+  var params = new URLSearchParams(location.search);
+  quoteId    = params.get('quote_id');
+  coId       = params.get('co_id');
+  setLoading('Loading products…');
+  await loadProducts();
+  if (coId) {
+    setLoading('Loading change order…');
+    await loadChangeOrder(coId);
+    showForm();
+    hideLoading();
+  } else if (quoteId) {
+    setLoading('Loading quote…');
+    await loadQuote(quoteId);
+    await assignChangeNumber();
+    showForm();
+    hideLoading();
+  } else {
+    // No params — show quote picker so user can search
+    hideLoading();
+    document.getElementById('quote-picker').style.display = '';
+    document.getElementById('quote-search-input').focus();
+  }
+});
+
+function showForm() {
+  document.getElementById('quote-picker').style.display     = 'none';
+  document.getElementById('quote-summary-card').style.display = '';
+  document.getElementById('co-details-card').style.display  = '';
+  document.getElementById('line-items-card').style.display  = '';
+  document.getElementById('actions-card').style.display     = 'flex';
+  // Hide editing controls for basic users
+  if (_coUserRole === 'user') {
+    var addRow = document.getElementById('add-product-row');
+    if (addRow) addRow.style.display = 'none';
+    var saveDraftBtn = document.querySelector('#actions-card .btn-primary');
+    if (saveDraftBtn) saveDraftBtn.style.display = 'none';
+    var sendBtn = document.getElementById('btn-send');
+    if (sendBtn) sendBtn.style.display = 'none';
+  }
+}
+
+// ── Quote Search ──────────────────────────────────────────────
+var _allQuotes = [], _quoteSearchTimer = null;
+
+async function searchQuotes() {
+  var q = document.getElementById('quote-search-input').value.trim();
+  var results = document.getElementById('quote-search-results');
+  if (!q) { results.style.display='none'; return; }
+  clearTimeout(_quoteSearchTimer);
+  _quoteSearchTimer = setTimeout(async function() {
+    // Search by customer_name or quote_number using Supabase ilike
+    var r = await sbFetch(
+      '/rest/v1/quotes?select=id,quote_number,customer_name,customer_address,totals,signing_status,created_at' +
+      '&or=(customer_name.ilike.*' + encodeURIComponent(q) + '*,quote_number.ilike.*' + encodeURIComponent(q) + '*)' +
+      '&order=created_at.desc&limit=20'
+    );
+    if (!r.ok) { results.style.display='none'; return; }
+    var rows = await r.json();
+    if (!rows.length) {
+      results.innerHTML = '<div style="padding:12px 14px;color:#999;font-size:13px">No quotes found for "'+esc(q)+'"</div>';
+      results.style.display='block'; return;
+    }
+    results.innerHTML = rows.map(function(qt) {
+      var grand = qt.totals ? (qt.totals.grand||0) : 0;
+      var date  = new Date(qt.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+      return '<div style="padding:11px 14px;cursor:pointer;border-bottom:1px solid #eef2f8;font-size:13px" '+
+        'onmouseover="this.style.background=\'#f4f7fb\'" onmouseout="this.style.background=\'\'" '+
+        'onclick="pickQuote(\''+qt.id+'\')">'+
+          '<div style="display:flex;justify-content:space-between;align-items:center">'+
+            '<span style="font-weight:700;color:#1a3a5c">'+esc(qt.customer_name||'—')+'</span>'+
+            '<span style="font-weight:700;color:#1a3a5c">$'+parseFloat(grand).toLocaleString('en-US',{minimumFractionDigits:2})+'</span>'+
+          '</div>'+
+          '<div style="color:#6b7a90;font-size:11px;margin-top:2px">'+
+            esc(qt.quote_number||qt.id.slice(0,8).toUpperCase())+' &bull; '+esc(qt.customer_address||'')+' &bull; '+date+
+          '</div>'+
+        '</div>';
+    }).join('');
+    results.style.display='block';
+  }, 220);
+}
+
+async function pickQuote(id) {
+  document.getElementById('quote-search-results').style.display='none';
+  setLoading('Loading quote…');
+  quoteId = id;
+  await loadQuote(id);
+  await assignChangeNumber();
+  showForm();
+  hideLoading();
+  var tokenPart = _authToken ? '&token=' + encodeURIComponent(_authToken) : '';
+  history.replaceState(null,'','?quote_id='+id+tokenPart);
+}
+
+async function loadProducts() {
+  var r = await sbFetch('/rest/v1/products?select=id,name,unit,price,cat,tax&active=eq.true&order=sort_order.asc');
+  if (r.ok) allProducts = await r.json();
+}
+
+async function loadQuote(id) {
+  var r = await sbFetch('/rest/v1/quotes?id=eq.' + id + '&select=*&limit=1');
+  if (!r.ok) { showErr('Failed to load quote (' + r.status + ')'); return; }
+  var rows = await r.json();
+  if (!rows.length) { showErr('Quote not found.'); return; }
+  quote = rows[0];
+  populateQuoteInfo();
+  originalTotal = quote.totals ? (quote.totals.grand || 0) : 0;
+  lineItems = (quote.items || []).map(function(it) {
+    return Object.assign({}, it, { _status: 'original', _origQty: it.qty, _origPrice: it.price });
+  });
+  renderItems();
+}
+
+async function loadChangeOrder(id) {
+  var r = await sbFetch('/rest/v1/change_orders?id=eq.' + id + '&select=*&limit=1');
+  if (!r.ok) { showErr('Failed to load change order (' + r.status + ')'); return; }
+  var rows = await r.json();
+  if (!rows.length) { showErr('Change order not found.'); return; }
+  var co = rows[0];
+  coId = co.id; quoteId = co.quote_id;
+  document.getElementById('co-number').value      = co.co_number || '';
+  document.getElementById('co-description').value = co.findings || '';
+  document.getElementById('co-reason').value      = co.reason || '';
+  document.getElementById('co-number-badge').textContent = co.co_number || '';
+  document.getElementById('co-number-badge').style.display = '';
+  originalTotal = co.original_amount || 0;
+  var qr = await sbFetch('/rest/v1/quotes?id=eq.' + quoteId + '&select=*&limit=1');
+  if (qr.ok) { var qrows = await qr.json(); if (qrows.length) { quote = qrows[0]; populateQuoteInfo(); } }
+  // Reconstruct lineItems from original quote + diff stored in co.items jsonb
+  var coItems = co.items || {};
+  var origItems = (quote ? (quote.items || []) : []).map(function(it) {
+    return Object.assign({}, it, { _status: 'original', _origQty: it.qty, _origPrice: it.price });
+  });
+  (coItems.removed || []).forEach(function(rem) {
+    var i = origItems.findIndex(function(x){ return x.product_id === rem.product_id; });
+    if (i !== -1) origItems[i]._status = 'removed';
+  });
+  (coItems.modified || []).forEach(function(mod) {
+    var i = origItems.findIndex(function(x){ return x.product_id === mod.product_id; });
+    if (i !== -1) { origItems[i].qty = mod.qty; origItems[i].price = mod.price; origItems[i]._status = 'modified'; }
+  });
+  (coItems.added || []).forEach(function(add) {
+    origItems.push(Object.assign({}, add, { _status: 'added', _origQty: 0, _origPrice: add.price }));
+  });
+  lineItems = origItems;
+  renderItems();
+}
+
+async function assignChangeNumber() {
+  var r = await sbFetch('/rest/v1/change_orders?quote_id=eq.' + quoteId + '&select=co_number');
+  var count = 0;
+  if (r.ok) { var rows = await r.json(); count = rows.length; }
+  document.getElementById('co-number').value = 'CO-' + String(count + 1).padStart(3, '0');
+}
+
+function populateQuoteInfo() {
+  if (!quote) return;
+  document.getElementById('q-num').textContent      = quote.quote_number || quote.id.slice(0,8).toUpperCase();
+  document.getElementById('q-customer').textContent = quote.customer_name || '—';
+  document.getElementById('q-address').textContent  = quote.customer_address || '—';
+  document.getElementById('q-template').textContent = quote.template_id || '—';
+  document.getElementById('q-total').textContent    = '$' + parseFloat(quote.totals ? quote.totals.grand || 0 : 0).toLocaleString('en-US',{minimumFractionDigits:2});
+  var ss = quote.signing_status || 'unsigned';
+  var cls = ss === 'signed' ? 'sig-signed' : ss === 'sent' ? 'sig-sent' : 'sig-draft';
+  document.getElementById('q-status').innerHTML = '<span class="sig-status ' + cls + '">' + ss.charAt(0).toUpperCase()+ss.slice(1) + '</span>';
+  document.getElementById('modal-cust-name').value  = quote.customer_name || '';
+  document.getElementById('modal-cust-email').value = quote.customer_email || '';
+}
+
+// ── Line Items ────────────────────────────────────────────────
+function renderItems() {
+  var tbody = document.getElementById('items-tbody');
+  if (!lineItems.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:16px;color:#999">No items</td></tr>';
+    updateTotals(); return;
+  }
+  tbody.innerHTML = lineItems.map(function(item, idx) {
+    var tag = '';
+    if (item._status === 'added')    tag = '<span class="item-tag tag-added">+ADDED</span>';
+    if (item._status === 'removed')  tag = '<span class="item-tag tag-removed">−REMOVED</span>';
+    if (item._status === 'modified') tag = '<span class="item-tag tag-modified">✎MODIFIED</span>';
+    var dim    = item._status === 'removed' ? 'opacity:.5' : '';
+    var dis    = (item._status === 'removed' || _coUserRole === 'user') ? 'disabled' : '';
+    var lt     = (item.price * item.qty).toFixed(2);
+    return '<tr style="' + dim + '">' +
+      '<td class="item-name">' + esc(item.name) + tag + '</td>' +
+      '<td style="color:#6b7a90;font-size:12px">' + esc(item.unit||'—') + '</td>' +
+      '<td><input type="number" class="qty-input" data-idx="' + idx + '" value="' + item.qty + '" min="0" step="0.01" oninput="onQtyChange(this)" ' + dis + '></td>' +
+      '<td><input type="number" class="price-input" data-idx="' + idx + '" value="' + parseFloat(item.price).toFixed(2) + '" min="0" step="0.01" oninput="onPriceChange(this)" ' + dis + '></td>' +
+      '<td class="line-total' + (item._status==='removed'?' negative':'') + '" id="lt-' + idx + '">' +
+        (item._status==='removed'?'−':'') + '$' + Math.abs(parseFloat(lt)).toLocaleString('en-US',{minimumFractionDigits:2}) +
+      '</td>' +
+      '<td style="text-align:center">' +
+        (item._status !== 'removed'
+          ? '<button class="btn btn-sm" style="background:#f8d7da;color:#721c24;border:none;cursor:pointer" onclick="removeItem(' + idx + ')">✕</button>'
+          : '<button class="btn btn-sm btn-outline" onclick="restoreItem(' + idx + ')" title="Restore">↩</button>') +
+      '</td></tr>';
+  }).join('');
+  updateTotals();
+}
+
+function onQtyChange(el) {
+  var idx = +el.dataset.idx, q = parseFloat(el.value)||0;
+  lineItems[idx].qty = q;
+  if (lineItems[idx]._status === 'original' && q !== lineItems[idx]._origQty) lineItems[idx]._status = 'modified';
+  updateLtCell(idx); updateTotals();
+}
+function onPriceChange(el) {
+  var idx = +el.dataset.idx, p = parseFloat(el.value)||0;
+  lineItems[idx].price = p;
+  if (lineItems[idx]._status === 'original' && p !== lineItems[idx]._origPrice) lineItems[idx]._status = 'modified';
+  updateLtCell(idx); updateTotals();
+}
+function updateLtCell(idx) {
+  var el = document.getElementById('lt-' + idx);
+  if (!el) return;
+  var it = lineItems[idx], lt = (it.price * it.qty).toFixed(2);
+  el.textContent = (it._status==='removed'?'−':'') + '$' + Math.abs(parseFloat(lt)).toLocaleString('en-US',{minimumFractionDigits:2});
+  el.className   = 'line-total' + (it._status==='removed'?' negative':'');
+}
+function removeItem(idx) {
+  if (lineItems[idx]._status === 'added') lineItems.splice(idx, 1);
+  else lineItems[idx]._status = 'removed';
+  renderItems();
+}
+function restoreItem(idx) {
+  lineItems[idx]._status = (lineItems[idx].qty !== lineItems[idx]._origQty || lineItems[idx].price !== lineItems[idx]._origPrice) ? 'modified' : 'original';
+  renderItems();
+}
+function updateTotals() {
+  var newT = 0;
+  lineItems.forEach(function(it) { if (it._status !== 'removed') newT += parseFloat((it.price * it.qty).toFixed(2)); });
+  newT = +newT.toFixed(2);
+  var delta = +(newT - originalTotal).toFixed(2);
+  document.getElementById('tot-original').textContent = '$' + originalTotal.toLocaleString('en-US',{minimumFractionDigits:2});
+  document.getElementById('tot-new').textContent      = '$' + newT.toLocaleString('en-US',{minimumFractionDigits:2});
+  document.getElementById('tot-delta').textContent    = (delta>=0?'+$':'-$') + Math.abs(delta).toLocaleString('en-US',{minimumFractionDigits:2});
+  var row = document.getElementById('tot-delta-row');
+  row.className = 'totals-row grand ' + (delta < 0 ? 'delta-neg' : 'delta-pos');
+}
+
+// ── Product Search ────────────────────────────────────────────
+function filterProducts() {
+  var q = document.getElementById('product-search').value.toLowerCase().trim();
+  var el = document.getElementById('product-results');
+  if (!q) { el.style.display='none'; return; }
+  _filtProd = allProducts.filter(function(p){
+    return (p.name || '').toLowerCase().includes(q) ||
+           (p.cat  || '').toLowerCase().includes(q) ||
+           (p.unit || '').toLowerCase().includes(q);
+  }).slice(0, 20);
+  if (!_filtProd.length) {
+    el.innerHTML = '<div style="padding:10px 12px;color:#999;font-size:13px">No products found</div>';
+    el.style.display='block'; return;
+  }
+  el.innerHTML = _filtProd.map(function(p, i) {
+    var sub = [p.cat, p.unit].filter(Boolean).join(' · ');
+    return '<div style="padding:9px 12px;cursor:pointer;border-bottom:1px solid #eef2f8;font-size:13px" '+
+      'onmouseover="this.style.background=\'#f4f7fb\'" onmouseout="this.style.background=\'\'" onclick="selectProd('+i+')">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center">'+
+        '<strong>'+esc(p.name)+'</strong>'+
+        '<span style="font-weight:700;color:#1a3a5c">$'+parseFloat(p.price).toFixed(2)+'</span>'+
+      '</div>'+
+      (sub ? '<div style="color:#6b7a90;font-size:11px;margin-top:2px">'+esc(sub)+'</div>' : '')+
+      '</div>';
+  }).join('');
+  el.style.display='block';
+}
+function selectProd(i) {
+  selectedProd = _filtProd[i];
+  document.getElementById('product-search').value = selectedProd.name;
+  document.getElementById('product-results').style.display='none';
+}
+function addSelectedProduct() {
+  if (!selectedProd) { alert('Select a product first.'); return; }
+  var qty = parseFloat(document.getElementById('add-qty').value)||1;
+  var existing = lineItems.find(function(it){ return it.product_id===selectedProd.id && it._status!=='removed'; });
+  if (existing) {
+    existing.qty += qty;
+    if (existing._status === 'original') existing._status = 'modified';
+  } else {
+    lineItems.push({ product_id:selectedProd.id, name:selectedProd.name, unit:selectedProd.unit||'', price:parseFloat(selectedProd.price)||0,
+      cat:selectedProd.cat||'', tax:selectedProd.tax||false, qty:qty, line_total:+(parseFloat(selectedProd.price||0)*qty).toFixed(2),
+      note:'', _status:'added', _origQty:0, _origPrice:parseFloat(selectedProd.price)||0 });
+  }
+  selectedProd=null; document.getElementById('product-search').value=''; document.getElementById('add-qty').value='1';
+  renderItems();
+}
+document.addEventListener('click', function(e){
+  if (!e.target.closest('#product-results') && e.target.id !== 'product-search')
+    document.getElementById('product-results').style.display='none';
+});
+
+// ── Diff Arrays ───────────────────────────────────────────────
+function getDiff() {
+  var added=[], removed=[], modified=[];
+  lineItems.forEach(function(it){
+    if (it._status==='added')    added.push({product_id:it.product_id,name:it.name,unit:it.unit,price:it.price,qty:it.qty,line_total:+(it.price*it.qty).toFixed(2)});
+    else if (it._status==='removed') removed.push({product_id:it.product_id,name:it.name,qty:it._origQty,price:it._origPrice});
+    else if (it._status==='modified') modified.push({product_id:it.product_id,name:it.name,unit:it.unit,orig_qty:it._origQty,qty:it.qty,orig_price:it._origPrice,price:it.price,line_total:+(it.price*it.qty).toFixed(2)});
+  });
+  return { added, removed, modified };
+}
+function computeNewTotal() {
+  var t=0;
+  lineItems.forEach(function(it){ if(it._status!=='removed') t+=+(it.price*it.qty).toFixed(2); });
+  return +t.toFixed(2);
+}
+
+function getUserIdFromToken(token) {
+  try { return JSON.parse(atob(token.split('.')[1])).sub || null; } catch(e) { return null; }
+}
+
+// ── Save Draft ────────────────────────────────────────────────
+async function saveDraft() {
+  var desc   = document.getElementById('co-description').value.trim();
+  var reason = document.getElementById('co-reason').value.trim();
+  if (!desc) { showAlert('Enter a description.', 'danger'); return false; }
+  if (!_authToken) { showAlert('Not signed in — please open this page from the estimator.', 'danger'); return false; }
+  setSaveStatus('Saving…');
+  var userId = getUserIdFromToken(_authToken);
+  var diff = getDiff(), newT = computeNewTotal();
+  var payload = { quote_id:quoteId, tenant_id:TENANT, created_by:userId,
+    co_number:document.getElementById('co-number').value, findings:desc, reason:reason,
+    items:{ added:diff.added, removed:diff.removed, modified:diff.modified },
+    original_amount:originalTotal, total:newT, status:'draft' };
+  var r, data;
+  if (coId) {
+    r    = await sbFetch('/rest/v1/change_orders?id=eq.'+coId, { method:'PATCH', headers:{'Prefer':'return=representation'}, body:JSON.stringify(payload) });
+    data = await r.json(); data = Array.isArray(data)?data[0]:data;
+  } else {
+    r    = await sbFetch('/rest/v1/change_orders', { method:'POST', headers:{'Prefer':'return=representation'}, body:JSON.stringify(payload) });
+    data = await r.json(); data = Array.isArray(data)?data[0]:data;
+    if (data && data.id) { coId=data.id; history.replaceState(null,'','?quote_id='+quoteId+'&co_id='+coId); }
+  }
+  if (!r.ok) { setSaveStatus(''); showAlert('Save failed: '+(data.message||r.status), 'danger'); return false; }
+  // Update CO number badge in header
+  var coNum = document.getElementById('co-number').value;
+  var badge = document.getElementById('co-number-badge');
+  badge.textContent = coNum;
+  badge.style.display = '';
+  setSaveStatus('Saved ✓'); setTimeout(function(){ setSaveStatus(''); }, 2500);
+  return true;
+}
+
+// ── Send for Signature ────────────────────────────────────────
+function openSendModal()  { document.getElementById('modal-alert').style.display='none'; document.getElementById('send-modal').classList.add('open'); }
+function closeSendModal() { document.getElementById('send-modal').classList.remove('open'); }
+
+async function sendForSignature() {
+  var name  = document.getElementById('modal-cust-name').value.trim();
+  var email = document.getElementById('modal-cust-email').value.trim();
+  if (!name||!email) { showModalAlert('Name and email required.', 'danger'); return; }
+  var ok = await saveDraft();
+  if (!ok || !coId) { showModalAlert('Save failed — fix errors first.', 'danger'); return; }
+  var btn = document.getElementById('modal-send-btn');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Sending…';
+  if (!_authToken) { showModalAlert('Not signed in.', 'danger'); btn.disabled=false; btn.innerHTML='Send Email ✉️'; return; }
+  var docHtml = buildDocHtml(name);
+  var { data: _sfsd } = await _supa.auth.getSession();
+  var _sfToken = (_sfsd && _sfsd.session) ? _sfsd.session.access_token : (_authToken || SB_ANON);
+  var r = await fetch(SB_URL+'/functions/v1/send-for-signature', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+_sfToken},
+    body:JSON.stringify({ quote_id:quoteId, change_order_id:coId, customer_name:name, customer_email:email,
+      document_html:docHtml, tenant_id:TENANT,
+      document_summary:{ type:'Change Order', project_num:document.getElementById('co-number').value,
+        template:quote?quote.template_id:'', total:computeNewTotal() }})
+  });
+  var data = await r.json();
+  btn.disabled=false; btn.innerHTML='Send Email ✉️';
+  if (!r.ok) { showModalAlert('Failed: '+(data.error||r.status), 'danger'); return; }
+  closeSendModal();
+  showAlert('Change order sent to '+email+' for signature ✅', 'success');
+  document.getElementById('btn-send').disabled=true;
+  document.getElementById('btn-send').textContent='✅ Sent';
+}
+
+// ── Document HTML Builder ─────────────────────────────────────
+function buildDocHtml(custName) {
+  var diff    = getDiff(), newT = computeNewTotal(), delta = +(newT - originalTotal).toFixed(2);
+  var coNum   = document.getElementById('co-number').value;
+  var desc    = document.getElementById('co-description').value.trim();
+  var rsn     = document.getElementById('co-reason').value.trim();
+  var today   = new Date().toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'});
+  var addr    = quote ? (quote.customer_address || '') : '';
+  var qNum    = quote ? (quote.quote_number || quote.id.slice(0,8).toUpperCase()) : '';
+  var tplName = quote ? (quote.template_id || '') : '';
+
+  function fmt$(n) { return '$' + Math.abs(parseFloat(n)).toLocaleString('en-US', {minimumFractionDigits:2}); }
+  function h(s)    { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function initBar() {
+    return '<div class="initials-bar">I acknowledge that I have read and understand this page.&nbsp;&nbsp;Initials:&nbsp;<span class="init-line"></span></div>';
+  }
+
+  // ── Scope rows ──
+  var scopeRows = '';
+  diff.removed.forEach(function(it) {
+    var qty = it.qty || it.orig_qty || 0;
+    scopeRows += '<tr><td class="dc">'+h(it.name)+(it.unit?' <em style="color:#888;font-size:10px">&times;'+qty+' '+h(it.unit)+'</em>':'')+'</td>'+
+      '<td class="qc" style="text-align:center"><span class="tag-removed">REMOVED</span></td>'+
+      '<td class="qc" style="text-align:right;color:#721c24;font-weight:700">&minus;'+fmt$(it.price * qty)+'</td></tr>';
+  });
+  diff.added.forEach(function(it) {
+    var qty = it.qty || 0;
+    scopeRows += '<tr><td class="dc">'+h(it.name)+(it.unit?' <em style="color:#888;font-size:10px">&times;'+qty+' '+h(it.unit)+'</em>':'')+'</td>'+
+      '<td class="qc" style="text-align:center"><span class="tag-added">ADDED</span></td>'+
+      '<td class="qc" style="text-align:right;color:#155724;font-weight:700">+'+fmt$(it.price * qty)+'</td></tr>';
+  });
+  diff.modified.forEach(function(it) {
+    scopeRows += '<tr><td class="dc">'+h(it.name)+(it.unit?' <em style="color:#888;font-size:10px">&times;'+it.qty+' '+h(it.unit)+'</em>':'')+'</td>'+
+      '<td class="qc" style="text-align:center"><span class="tag-modified">MODIFIED</span></td>'+
+      '<td class="qc" style="text-align:right;font-weight:700">'+fmt$(it.price * it.qty)+'</td></tr>';
+  });
+  if (!scopeRows) scopeRows = '<tr><td colspan="3" class="dc" style="text-align:center;color:#999;padding:14px">No line item changes recorded</td></tr>';
+
+  var deltaColor = delta >= 0 ? '#2e7d32' : '#c0392b';
+  var deltaFmt   = (delta >= 0 ? '+' : '&minus;') + fmt$(Math.abs(delta));
+
+  // ── Self-contained CSS (mirrors contract document styling) ──
+  var css = [
+    '*{box-sizing:border-box;margin:0;padding:0}',
+    'body{font-family:Arial,Helvetica,sans-serif;background:#aaaaaa;color:#1e2a38;font-size:12px}',
+    '.page{background:#fff;width:816px;min-height:1056px;margin:0 auto 24px;padding:40px 44px;position:relative;box-shadow:0 2px 12px rgba(0,0,0,.2)}',
+    '@media print{body{background:#fff} .page{box-shadow:none;margin:0;page-break-after:always}}',
+    /* Header */
+    '.rhe-hdr{background:#1a3a5c;color:#fff;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;margin:-40px -44px 28px}',
+    '.rhe-logo{font-size:18px;font-weight:900;letter-spacing:-.5px;line-height:1.2}',
+    '.rhe-sub{font-size:10px;color:#93b4d0;margin-top:2px}',
+    '.co-badge{background:#e8a020;color:#fff;font-size:11px;font-weight:800;padding:4px 12px;border-radius:12px;letter-spacing:.5px}',
+    '.co-num{font-size:22px;font-weight:900;font-family:monospace;color:#fff;text-align:right;margin-top:4px}',
+    /* Info table */
+    '.info-tbl{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:18px}',
+    '.info-tbl td{padding:4px 8px}',
+    '.info-tbl .lbl{color:#6b7a90;font-weight:600;white-space:nowrap;width:110px}',
+    '.info-tbl .val{font-weight:700;color:#1e2a38}',
+    /* Subject box */
+    '.subject-box{background:#f4f7fb;border-left:3px solid #1a3a5c;border-radius:0 6px 6px 0;padding:12px 16px;margin-bottom:18px}',
+    '.subject-lbl{font-size:10px;font-weight:700;color:#6b7a90;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}',
+    '.subject-txt{font-size:14px;font-weight:800;color:#1a3a5c}',
+    '.reason-txt{font-size:11px;color:#3a4a5c;margin-top:8px;line-height:1.6}',
+    /* Section title */
+    '.sec-title{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#1a3a5c;border-bottom:2px solid #e8500a;padding-bottom:5px;margin-bottom:14px}',
+    /* Scope table */
+    '.scope-tbl{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px;border:1px solid #e8edf5}',
+    '.scope-tbl th{background:#f4f7fb;padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#6b7a90;text-transform:uppercase;letter-spacing:.5px}',
+    '.scope-tbl td.dc{padding:8px 10px;border-bottom:1px solid #f0f4f8}',
+    '.scope-tbl td.qc{padding:8px 10px;border-bottom:1px solid #f0f4f8;white-space:nowrap}',
+    /* Tags */
+    '.tag-added{background:#d4edda;color:#155724;font-size:9px;font-weight:800;padding:2px 7px;border-radius:10px}',
+    '.tag-removed{background:#f8d7da;color:#721c24;font-size:9px;font-weight:800;padding:2px 7px;border-radius:10px}',
+    '.tag-modified{background:#fff3cd;color:#856404;font-size:9px;font-weight:800;padding:2px 7px;border-radius:10px}',
+    /* Totals */
+    '.tot-tbl{width:100%;max-width:360px;margin-left:auto;border-collapse:collapse;font-size:13px;margin-bottom:18px}',
+    '.tot-tbl td{padding:6px 10px}',
+    '.tot-tbl .tot-lbl{color:#6b7a90}',
+    '.tot-tbl .tot-val{text-align:right;font-weight:700}',
+    '.tot-tbl .grand-row td{border-top:2px solid #1a3a5c;font-size:16px;font-weight:900;color:#1a3a5c;padding-top:10px}',
+    /* T&C */
+    '.tc{font-size:11px;line-height:1.75;color:#2a3a4c}',
+    '.tc p{margin-bottom:10px}',
+    /* Initials bar */
+    '.initials-bar{background:#f8fafd;border:1px solid #d5dae8;border-radius:5px;padding:8px 14px;margin-top:24px;font-size:11px;color:#1a3a5c;font-weight:600;display:flex;align-items:center;gap:8px}',
+    '.init-line{display:inline-block;min-width:80px;border-bottom:1.5px solid #1a3a5c;height:20px;vertical-align:bottom}',
+    /* Sig blocks — identical pattern to contracts, recognized by signing.html enhanceIframe() */
+    '.sig-block{flex:1}',
+    '.sig-line{border-bottom:2px solid #1a3a5c;height:50px;margin-bottom:5px}',
+    '.sig-label{font-size:9px;color:#7a8a9c;text-transform:uppercase;letter-spacing:.5px}',
+    /* Auth layout */
+    '.co-parties{display:grid;grid-template-columns:1fr 1px 1fr;gap:24px;margin-top:16px}',
+    '.divider-col{background:#e8edf5}',
+    '.auth-col-label{font-size:10px;font-weight:700;color:#6b7a90;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}',
+    /* Notices */
+    '.ueta-notice{background:#f0f7f0;border:1px solid #81c784;border-radius:6px;padding:10px 14px;margin-top:20px;font-size:10px;color:#2d4a2d;line-height:1.6}',
+    '.notice-bar{background:#fff3cd;border:1px solid #ffc107;border-radius:5px;padding:7px 12px;font-size:10px;font-weight:700;color:#5a4000;margin-bottom:14px}'
+  ].join('');
+
+  // ── Shared header HTML ──
+  function pageHeader() {
+    return '<div class="rhe-hdr">' +
+      '<div><div class="rhe-logo">RENEW HOME EXTERIORS</div><div class="rhe-sub">Roofing &bull; Siding &bull; Windows &bull; Doors</div></div>' +
+      '<div style="text-align:right"><div class="co-badge">CHANGE ORDER</div><div class="co-num">'+h(coNum)+'</div></div>' +
+    '</div>';
+  }
+
+  // ════ PAGE 1 — COVER ════
+  var pg1 = '<div class="page">' + pageHeader() +
+    '<div class="sec-title">Change Order Details</div>' +
+    '<table class="info-tbl">' +
+      '<tr><td class="lbl">Date</td><td class="val">'+h(today)+'</td><td class="lbl">CO Number</td><td class="val">'+h(coNum)+'</td></tr>' +
+      '<tr><td class="lbl">Customer</td><td class="val">'+h(custName)+'</td><td class="lbl">Quote Ref #</td><td class="val">'+h(qNum)+'</td></tr>' +
+      '<tr><td class="lbl">Address</td><td class="val" colspan="3">'+h(addr)+'</td></tr>' +
+      (tplName ? '<tr><td class="lbl">Project Type</td><td class="val" colspan="3">'+h(tplName)+'</td></tr>' : '') +
+    '</table>' +
+    '<div class="subject-box">' +
+      '<div class="subject-lbl">Subject / Description of Change</div>' +
+      '<div class="subject-txt">'+h(desc)+'</div>' +
+      (rsn ? '<div class="subject-lbl" style="margin-top:10px">Reason for Change</div><div class="reason-txt">'+h(rsn)+'</div>' : '') +
+    '</div>' +
+    '<div class="sec-title" style="margin-top:22px">Financial Summary</div>' +
+    '<table class="tot-tbl">' +
+      '<tr><td class="tot-lbl">Original Contract Total</td><td class="tot-val">'+fmt$(originalTotal)+'</td></tr>' +
+      '<tr><td class="tot-lbl">Change Order Amount</td><td class="tot-val" style="color:'+deltaColor+'">'+deltaFmt+'</td></tr>' +
+      '<tr class="grand-row"><td>New Contract Total</td><td class="tot-val">'+fmt$(newT)+'</td></tr>' +
+    '</table>' +
+    '<p style="font-size:11px;color:#555;font-style:italic;line-height:1.7;margin-top:6px">' +
+      'This Change Order amends the original contract between <strong>'+h(custName)+'</strong> and <strong>Renew Home Exteriors</strong>. ' +
+      'All other terms and conditions of the original contract remain in full force and effect. ' +
+      'This Change Order becomes effective and binding upon execution by both parties.' +
+    '</p>' +
+  '</div>';
+
+  // ════ PAGE 2 — SCOPE CHANGES ════
+  var pg2 = '<div class="page">' + pageHeader() +
+    '<div class="sec-title">Scope Changes</div>' +
+    '<table class="scope-tbl">' +
+      '<thead><tr>' +
+        '<th style="width:55%">Item</th>' +
+        '<th style="text-align:center;width:15%">Change</th>' +
+        '<th style="text-align:right">Amount</th>' +
+      '</tr></thead>' +
+      '<tbody>'+scopeRows+'</tbody>' +
+    '</table>' +
+    initBar() +
+  '</div>';
+
+  // ════ PAGE 3 — TERMS & CONDITIONS ════
+  var pg3 = '<div class="page">' + pageHeader() +
+    '<div class="sec-title">Change Order Terms &amp; Conditions</div>' +
+    '<div class="tc">' +
+      '<p><strong>1. Scope of This Amendment.</strong> This Change Order is issued pursuant to the terms of the original contract referenced above. It constitutes a written amendment to that contract and is binding upon execution by both parties. No verbal discussions or representations, of any kind, will be honored unless in writing on a company contract, change order, or company letterhead.</p>' +
+      '<p><strong>2. Contract Price Adjustment.</strong> Upon execution of this Change Order, the contract price shall be revised to the New Contract Total shown herein. All payment terms from the original contract remain in effect. Any additional deposit required by this Change Order is due prior to the commencement of the changed scope of work.</p>' +
+      '<p><strong>3. Original Contract Terms Remain in Effect.</strong> Except as expressly modified by this Change Order, all terms and conditions, warranties, and specifications of the original contract remain unchanged and in full force and effect. This Change Order is incorporated into and made a part of the original contract.</p>' +
+      '<p><strong>4. Cancellation.</strong> After three (3) business days from the date of this Change Order, the modified contract is not subject to cancellation without payment to Seller of not less than thirty-five percent (35%) of the total change order amount, in addition to any cancellation obligations under the original contract.</p>' +
+      '<p><strong>5. Warranty.</strong> Any new materials or workmanship introduced by this Change Order are covered by the same limited workmanship warranty as the original contract. All manufacturer warranties on materials apply as provided. This Change Order does not extend or reduce the warranty period of the original contract unless expressly stated herein.</p>' +
+      '<p><strong>6. Alterations.</strong> Any further alterations or deviations from the scope defined in this Change Order involving additional costs will require a separate written change order and will constitute an additional charge over and above the total established by this Change Order.</p>' +
+      '<p><strong>7. Authorization &amp; Electronic Records.</strong> By signing below, Customer authorizes Renew Home Exteriors to perform the work described in this Change Order and agrees to the revised contract total. Customer consents to the use of electronic records and signatures as provided by UETA and the federal E-SIGN Act (15 U.S.C. &sect;7001 et seq.).</p>' +
+    '</div>' +
+    initBar() +
+  '</div>';
+
+  // ════ PAGE 4 — AUTHORIZATION ════
+  var pg4 = '<div class="page">' + pageHeader() +
+    '<div class="sec-title">Authorization Page</div>' +
+    '<div style="background:#f4f7fb;border-radius:8px;padding:16px 20px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px">' +
+      '<div>' +
+        '<div style="font-size:10px;font-weight:700;color:#6b7a90;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Project</div>' +
+        '<div style="font-size:13px;font-weight:800;color:#1a3a5c">'+(tplName ? h(tplName) : h(qNum))+'</div>' +
+        '<div style="font-size:11px;color:#6b7a90;margin-top:3px">'+h(custName)+' &bull; '+h(addr)+'</div>' +
+      '</div>' +
+      '<div style="text-align:right">' +
+        '<div style="font-size:10px;font-weight:700;color:#6b7a90;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">New Contract Total</div>' +
+        '<div style="font-size:26px;font-weight:900;color:#1a3a5c">'+fmt$(newT)+'</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="notice-bar">&#9888; Estimates valid for 30 days &bull; Deposit required before commencement of changed work &bull; No changes after 3-day notice period</div>' +
+    '<p style="font-size:11px;color:#2a3a4c;line-height:1.75;margin-bottom:18px">' +
+      'I/We have read and understand this Change Order, including the revised scope of work, pricing, and terms above. ' +
+      'I/We authorize Renew Home Exteriors to perform the work as described herein. ' +
+      'This Change Order is incorporated as an amendment to the original contract. ' +
+      'I/We acknowledge that payment in full is due per the terms of the original contract as amended herein.' +
+    '</p>' +
+    '<div style="font-size:12px;font-weight:700;color:#1a3a5c;margin-bottom:10px;text-transform:uppercase;letter-spacing:.4px">Customer Authorization</div>' +
+    '<div class="co-parties">' +
+      '<div>' +
+        '<div class="auth-col-label">Customer Signature</div>' +
+        /* SIGNING HOOK: .sig-block > .sig-line + .sig-label (non-"Date") → auth-sig required field */
+        '<div class="sig-block"><div class="sig-line"></div><div class="sig-label">'+h(custName)+'</div></div>' +
+      '</div>' +
+      '<div class="divider-col"></div>' +
+      '<div>' +
+        '<div class="auth-col-label">Date</div>' +
+        /* SIGNING HOOK: .sig-block > .sig-line + .sig-label ("Date") → editable date field */
+        '<div class="sig-block"><div class="sig-line"></div><div class="sig-label">Date</div></div>' +
+      '</div>' +
+    '</div>' +
+    '<div style="font-size:12px;font-weight:700;color:#1a3a5c;margin:26px 0 10px;text-transform:uppercase;letter-spacing:.4px">Contractor Authorization</div>' +
+    '<div style="display:flex;gap:28px">' +
+      '<div style="flex:1">' +
+        '<div class="auth-col-label">Representative Signature</div>' +
+        '<div style="border-bottom:1.5px solid #1a3a5c;height:50px;margin-bottom:5px"></div>' +
+        '<div style="font-size:9px;color:#7a8a9c;text-transform:uppercase;letter-spacing:.5px">Renew Home Exteriors Representative</div>' +
+      '</div>' +
+      '<div style="width:180px">' +
+        '<div class="auth-col-label">Date</div>' +
+        '<div style="border-bottom:1.5px solid #1a3a5c;height:50px;margin-bottom:5px;display:flex;align-items:flex-end;padding-bottom:4px;font-size:12px;font-weight:600;color:#1a3a5c">'+h(today)+'</div>' +
+        '<div style="font-size:9px;color:#7a8a9c;text-transform:uppercase;letter-spacing:.5px">Date</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="ueta-notice">' +
+      '<strong>Electronic Signature Disclosure:</strong> By signing electronically, you agree to the use of electronic records and signatures for this transaction as provided by the Uniform Electronic Transactions Act (UETA) and the federal E-SIGN Act (15 U.S.C. &sect;7001 et seq.). Your electronic signature is legally binding and equivalent to a handwritten signature. Your signature, name, email, IP address, and timestamp are recorded as part of the legally admissible record.' +
+    '</div>' +
+  '</div>';
+
+  return '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Change Order '+h(coNum)+'</title>' +
+    '<style>'+css+'</style>' +
+    '</head><body>' +
+    pg1 + pg2 + pg3 + pg4 +
+    '</body></html>';
+}
+
+// ── Helpers ─────────────────────────────────────────────
+function setLoading(m){ document.getElementById('loading-msg').textContent=m||'Loading…'; document.getElementById('loading-overlay').style.display=''; }
+function hideLoading(){ document.getElementById('loading-overlay').style.display='none'; }
+function showAlert(msg,type){
+  var el=document.getElementById('alert-area');
+  el.className='alert alert-'+(type||'info');
+  el.textContent=msg;
+  el.style.display='';
+  setTimeout(function(){ el.style.display='none'; }, 5000);
+}
+function showErr(msg){ showAlert(msg,'danger'); hideLoading(); }
+function showModalAlert(msg,type){
+  var el=document.getElementById('modal-alert');
+  el.className='alert alert-'+(type||'info');
+  el.textContent=msg;
+  el.style.display='';
+}
+function setSaveStatus(t){ document.getElementById('save-status').textContent=t; }
+function getUserIdFromToken(tok){
+  try{ return JSON.parse(atob(tok.split('.')[1])).sub; }catch(e){ return null; }
+}
+function getDiff(){
+  var added=[], removed=[], modified=[];
+  lineItems.forEach(function(it){
+    if (it._status==='added')    added.push(it);
+    if (it._status==='removed')  removed.push({ product_id:it.product_id, name:it.name });
+    if (it._status==='modified') modified.push({ product_id:it.product_id, name:it.name, qty:it.qty, price:it.price });
+  });
+  return { added:added, removed:removed, modified:modified };
+}
+function computeNewTotal(){
+  var t=0;
+  lineItems.forEach(function(it){ if(it._status!=='removed') t+=parseFloat((it.price*it.qty).toFixed(2)); });
+  return parseFloat(t.toFixed(2));
+}
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+</script>
+</body>
+</html>

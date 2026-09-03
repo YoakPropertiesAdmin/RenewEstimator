@@ -1,0 +1,17 @@
+# Second Netlify site: the customer signing page, deployed separately from the
+# estimator so a link already sitting in a customer's inbox is unaffected by
+# estimator deploys. Set this site's publish directory to "signing-site".
+#
+# index.html here is a byte-for-byte copy of the repo root's signing.html, which
+# remains the source of truth. apply-new-config.sh checks the two for drift.
+
+[build]
+  publish = "."
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Pragma = "no-cache"
+    Expires = "0"
+    X-Robots-Tag = "noindex, nofollow, noarchive, nosnippet"

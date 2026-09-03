@@ -1,0 +1,1775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Renew Home Exteriors</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+  :root {
+    --primary: #1a3a5c;
+    --accent:  #e8500a;
+    --light:   #f4f7fb;
+    --border:  #d0d9e8;
+    --success: #2a7a3b;
+    --danger:  #c0392b;
+    --text:    #1e2a38;
+    --muted:   #6b7a90;
+    --card:    #ffffff;
+    --shadow:  0 2px 12px rgba(26,58,92,0.10);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--light); color: var(--text); font-size: 14px; }
+
+  /* LOADING GATE */
+  #loadingGate {
+    position: fixed; inset: 0; z-index: 9999;
+    background: var(--primary);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+    color: #fff;
+  }
+  .spinner {
+    width: 40px; height: 40px;
+    border: 4px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* HEADER */
+  header {
+    background: var(--primary); color: #fff;
+    padding: 14px 28px; display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18); position: sticky; top: 0; z-index: 100;
+  }
+  header .logo   { font-size: 18px; font-weight: 700; }
+  header .badge  { background: var(--accent); color: #fff; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+  header .ml     { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+  header .user   { font-size: 12px; opacity: 0.8; }
+  header a, header button.link {
+    background: none; border: none; color: rgba(255,255,255,0.75);
+    font-size: 12px; cursor: pointer; text-decoration: none;
+    padding: 5px 12px; border-radius: 14px;
+    transition: background 0.15s;
+  }
+  header a:hover, header button.link:hover { background: rgba(255,255,255,0.15); color: #fff; }
+
+  /* TABS */
+  .tab-nav {
+    background: var(--card); border-bottom: 2px solid var(--border);
+    display: flex; gap: 0; padding: 0 28px;
+  }
+  .tab-btn {
+    background: none; border: none; cursor: pointer;
+    padding: 14px 22px; font-size: 13px; font-weight: 600; color: var(--muted);
+    border-bottom: 3px solid transparent; margin-bottom: -2px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .tab-btn.active { color: var(--primary); border-bottom-color: var(--accent); }
+  .tab-btn:hover:not(.active) { color: var(--primary); }
+
+  /* CONTENT */
+  .tab-panel { display: none; padding: 24px 28px; }
+  .tab-panel.active { display: block; }
+
+  /* TOOLBAR */
+  .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .toolbar h2 { font-size: 16px; font-weight: 700; color: var(--primary); flex: 1; }
+  input[type=text], input[type=number], select, textarea {
+    padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px;
+    font-size: 13px; color: var(--text); background: #fff;
+  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); }
+
+  /* BUTTONS */
+  .btn { padding: 7px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: opacity 0.15s; }
+  .btn:hover { opacity: 0.85; }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-accent  { background: var(--accent);  color: #fff; }
+  .btn-success { background: var(--success); color: #fff; }
+  .btn-danger  { background: var(--danger);  color: #fff; }
+  .btn-ghost   { background: #e8edf5; color: var(--text); }
+  .btn-sm      { padding: 4px 10px; font-size: 11px; border-radius: 4px; }
+
+  /* TABLE */
+  .tbl-wrap { background: var(--card); border-radius: 10px; border: 1px solid var(--border); overflow: auto; box-shadow: var(--shadow); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { background: var(--light); padding: 9px 10px; text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); border-bottom: 2px solid var(--border); white-space: nowrap; }
+  td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f8fafd; }
+  .cat-header td { background: #eef2f8; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--primary); padding: 5px 10px; }
+
+  /* STATUS BADGES */
+  .badge-active   { background: #d4edda; color: #155724; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+  .badge-inactive { background: #f8d7da; color: #721c24; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+  .badge-platform_owner { background: #1a3a5c; color: #fff; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+  .badge-super_admin    { background: #6f42c1; color: #fff; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+  .badge-admin    { background: #cce5ff; color: #004085; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+  .badge-director { background: #d4edda; color: #155724; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+  .badge-user     { background: #e2e3e5; color: #383d41; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+  .badge-rep      { background: #e2e3e5; color: #383d41; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1000;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-overlay.hidden { display: none; }
+  .modal {
+    background: #fff; border-radius: 12px; width: 100%; max-width: 540px;
+    max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 40px rgba(0,0,0,0.25);
+  }
+  .modal-header {
+    padding: 18px 22px 14px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; background: #fff; z-index: 1;
+  }
+  .modal-header h3 { font-size: 15px; font-weight: 700; color: var(--primary); }
+  .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--muted); line-height: 1; padding: 0 4px; }
+  .modal-close:hover { color: var(--danger); }
+  .modal-body { padding: 18px 22px; }
+  .modal-footer { padding: 12px 22px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-group { margin-bottom: 12px; }
+  .form-group label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+  .form-group input, .form-group select, .form-group textarea { width: 100%; }
+  .form-group textarea { resize: vertical; min-height: 80px; }
+
+  /* TOAST */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+    background: #1a3a5c; color: #fff; padding: 10px 18px; border-radius: 8px;
+    font-size: 13px; font-weight: 600; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    transform: translateY(80px); opacity: 0; transition: all 0.3s;
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+  #toast.error { background: var(--danger); }
+
+  /* TEMPLATE CARDS */
+  .tpl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .tpl-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px; box-shadow: var(--shadow); cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .tpl-card:hover { border-color: var(--accent); box-shadow: 0 4px 16px rgba(232,80,10,0.12); }
+  .tpl-card h4 { font-size: 14px; font-weight: 700; color: var(--primary); margin-bottom: 4px; }
+  .tpl-card .tpl-type { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .tpl-card .tpl-meta { font-size: 11px; color: var(--muted); margin-top: 8px; }
+
+  /* PDF LIBRARY */
+  .pdf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  .pdf-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px; box-shadow: var(--shadow);
+  }
+  .pdf-card.inactive { opacity: 0.55; }
+  .pdf-card-top { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+  .pdf-icon { font-size: 28px; flex-shrink: 0; }
+  .pdf-info { flex: 1; min-width: 0; }
+  .pdf-label { font-size: 13px; font-weight: 700; color: var(--primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pdf-filename { font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+  .pdf-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .cat-badge {
+    padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; text-transform: capitalize;
+  }
+  .cat-roofing   { background:#dbeafe;color:#1e40af; }
+  .cat-siding    { background:#d1fae5;color:#065f46; }
+  .cat-windows   { background:#e0f2fe;color:#075985; }
+  .cat-doors     { background:#fef9c3;color:#854d0e; }
+  .cat-gutters   { background:#fce7f3;color:#9d174d; }
+  .cat-general   { background:#f3f4f6;color:#374151; }
+  .pdf-actions { display: flex; gap: 6px; margin-top: 10px; }
+
+  .upload-box {
+    background: var(--card); border: 2px dashed var(--border); border-radius: 10px;
+    padding: 20px; text-align: center; margin-bottom: 20px;
+    transition: border-color 0.15s;
+  }
+  .upload-box.dragging { border-color: var(--accent); background: #fff7f4; }
+  .upload-fields { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: end; margin-top: 12px; }
+
+  /* SECTION BUILDER */
+  .section-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+  .section-item {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--light); border: 1px solid var(--border);
+    border-radius: 7px; padding: 8px 10px; font-size: 12px;
+  }
+  .section-item .s-icon { font-size: 16px; flex-shrink: 0; }
+  .section-item .s-label { flex: 1; font-weight: 600; }
+  .section-item .s-type { color: var(--muted); font-size: 10px; text-transform: uppercase; }
+  .section-item .s-actions { display: flex; gap: 4px; }
+  .s-move { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 14px; padding: 2px 4px; border-radius: 3px; }
+  .s-move:hover { background: #d0d9e8; color: var(--primary); }
+  .s-del { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 14px; padding: 2px 6px; border-radius: 3px; }
+  .s-del:hover { background: #fde8e8; color: var(--danger); }
+
+  .block-type-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .block-type-btn {
+    border: 1px solid var(--border); border-radius: 8px; padding: 10px;
+    background: #fff; cursor: pointer; text-align: center;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .block-type-btn:hover { border-color: var(--accent); background: #fff7f4; }
+  .block-type-btn .bt-icon { font-size: 20px; margin-bottom: 4px; }
+  .block-type-btn .bt-label { font-size: 11px; font-weight: 600; color: var(--primary); }
+  .block-type-btn .bt-desc { font-size: 10px; color: var(--muted); margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<!-- LOADING GATE -->
+<div id="loadingGate">
+  <div class="spinner"></div>
+  <div style="font-size:13px;opacity:0.7">Verifying access…</div>
+</div>
+
+<!-- ADMIN APP -->
+<div id="adminApp" style="display:none">
+
+  <header>
+    <div>
+      <div class="logo">🏠 Renew Home Exteriors</div>
+    </div>
+    <span class="badge">Admin Panel</span>
+    <div class="ml">
+      <span class="user" id="adminUserName"></span>
+      <a href="platform.html" id="platformLink" style="display:none">⚡ Platform</a>
+      <a href="PricingEstimator.html">📋 Estimator</a>
+      <a href="change-orders.html">🔄 Change Orders</a>
+      <button class="link" onclick="handleLogout()">Sign Out</button>
+    </div>
+  </header>
+
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="showTab('products')" id="tab-btn-products">📦 Products</button>
+    <button class="tab-btn" onclick="showTab('templates')" id="tab-btn-templates">📋 Templates</button>
+    <button class="tab-btn" onclick="showTab('users')" id="tab-btn-users">👥 Users</button>
+    <button class="tab-btn" onclick="showTab('pdfs')" id="tab-btn-pdfs">📁 PDF Library</button>
+    <button class="tab-btn" onclick="showTab('financing')" id="tab-btn-financing">💳 Financing</button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ PRODUCTS TAB -->
+  <div id="tab-products" class="tab-panel active">
+    <div class="toolbar">
+      <h2>Products</h2>
+      <input type="text" id="productSearch" placeholder="🔍 Search…" style="width:200px" oninput="filterProducts()">
+      <select id="catFilter" onchange="filterProducts()">
+        <option value="">All Categories</option>
+      </select>
+      <button class="btn btn-ghost btn-sm" onclick="openBulkPrice()">📈 Bulk Price Update</button>
+      <button class="btn btn-accent" onclick="openAddProduct()">+ Add Product</button>
+    </div>
+    <div class="tbl-wrap">
+      <table id="productsTable">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Unit</th>
+            <th>Price</th>
+            <th>Mat</th>
+            <th>Labor</th>
+            <th>Margin%</th>
+            <th>Tax</th>
+            <th>Status</th>
+            <th style="width:100px">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="productsBody">
+          <tr><td colspan="9" style="text-align:center;padding:20px;color:#999">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ TEMPLATES TAB -->
+  <div id="tab-templates" class="tab-panel">
+    <div class="toolbar">
+      <h2>Templates</h2>
+      <button class="btn btn-accent" onclick="openAddTemplate()">+ New Template</button>
+    </div>
+    <div class="tpl-grid" id="templatesGrid">
+      <div style="padding:20px;color:#999">Loading…</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ USERS TAB -->
+  <div id="tab-users" class="tab-panel">
+    <div class="toolbar">
+      <h2>Team Members</h2>
+      <button class="btn btn-accent" onclick="openInviteModal()">+ Invite User</button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Quotes</th><th>Status</th><th style="width:130px">Actions</th></tr>
+        </thead>
+        <tbody id="usersBody">
+          <tr><td colspan="7" style="text-align:center;padding:20px;color:#999">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ FINANCING TAB -->
+  <div id="tab-financing" class="tab-panel">
+    <div class="toolbar">
+      <h2>Financing Providers</h2>
+      <button class="btn btn-accent" onclick="openAddProvider()">+ Add Provider</button>
+    </div>
+    <div class="tpl-grid" id="financingGrid">
+      <div style="padding:20px;color:#999">Loading…</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ PDF LIBRARY TAB -->
+  <div id="tab-pdfs" class="tab-panel">
+    <div class="toolbar">
+      <h2>PDF Library</h2>
+      <select id="pdfCatFilter" onchange="renderPDFLibrary()" style="width:150px">
+        <option value="">All Categories</option>
+        <option value="roofing">Roofing</option>
+        <option value="siding">Siding</option>
+        <option value="windows">Windows</option>
+        <option value="doors">Doors</option>
+        <option value="gutters">Gutters</option>
+        <option value="general">General</option>
+      </select>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+        <input type="checkbox" id="pdfShowInactive" onchange="renderPDFLibrary()"> Show inactive
+      </label>
+    </div>
+
+    <!-- UPLOAD BOX -->
+    <div class="upload-box" id="pdfUploadBox">
+      <div style="font-size:24px;margin-bottom:6px">📤</div>
+      <div style="font-size:13px;font-weight:600;color:var(--primary)">Upload a PDF to the library</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Roofing PDFs will only appear in roofing templates. Siding PDFs only in siding templates. General appears in all.</div>
+      <div class="upload-fields">
+        <div class="form-group" style="margin:0">
+          <label>Label (display name)</label>
+          <input type="text" id="ul_label" placeholder="e.g. What to Expect: Roofing" style="width:100%">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Category</label>
+          <select id="ul_cat" style="width:100%">
+            <option value="roofing">Roofing</option>
+            <option value="siding">Siding</option>
+            <option value="windows">Windows</option>
+            <option value="doors">Doors</option>
+            <option value="gutters">Gutters</option>
+            <option value="general" selected>General (all templates)</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:4px">File</label>
+          <input type="file" id="ul_file" accept=".pdf" style="border:none;padding:0;background:none;font-size:12px">
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <button class="btn btn-accent" onclick="uploadPDF()" id="ul_btn">⬆ Upload PDF</button>
+        <span id="ul_status" style="font-size:12px;margin-left:12px;color:var(--muted)"></span>
+      </div>
+    </div>
+
+    <!-- PDF GRID -->
+    <div class="pdf-grid" id="pdfGrid">
+      <div style="padding:20px;color:#999">Loading…</div>
+    </div>
+  </div>
+
+</div><!-- /adminApp -->
+
+<!-- ═══════════════════════════════════════════════ PRODUCT MODAL -->
+<div class="modal-overlay hidden" id="productModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="productModalTitle">Add Product</h3>
+      <button class="modal-close" onclick="closeModal('productModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="pm_id">
+      <div class="form-row">
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Name</label>
+          <input type="text" id="pm_name" placeholder="Product name">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Category</label>
+          <select id="pm_cat">
+            <option>Roofing</option><option>Siding</option><option>Gutters &amp; Trim</option>
+            <option>Windows</option><option>Window Upgrades</option><option>Doors</option>
+            <option>Posts &amp; Columns</option><option>Misc</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Unit</label>
+          <select id="pm_unit">
+            <option>SQ</option><option>LF</option><option>EA</option><option>BX</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Price ($)</label>
+          <input type="number" id="pm_price" step="0.01" min="0">
+        </div>
+        <div class="form-group">
+          <label>Mat Cost ($)</label>
+          <input type="number" id="pm_mat" step="0.01" min="0" placeholder="optional">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Labor Cost ($)</label>
+          <input type="number" id="pm_labor" step="0.01" min="0" placeholder="optional">
+        </div>
+        <div class="form-group">
+          <label>Margin (%)</label>
+          <input type="number" id="pm_margin" step="0.1" min="0" max="100" placeholder="optional">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Taxable</label>
+          <select id="pm_tax"><option value="n">No</option><option value="y">Yes</option></select>
+        </div>
+        <div class="form-group">
+          <label>Active</label>
+          <select id="pm_active"><option value="true">Yes</option><option value="false">No</option></select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('productModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProduct()">Save Product</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ BULK PRICE MODAL -->
+<div class="modal-overlay hidden" id="bulkModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Bulk Price Update</h3>
+      <button class="modal-close" onclick="closeModal('bulkModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Category (or "All Categories")</label>
+        <select id="bulk_cat">
+          <option value="">All Categories</option>
+          <option>Roofing</option><option>Siding</option><option>Gutters &amp; Trim</option>
+          <option>Windows</option><option>Window Upgrades</option><option>Doors</option>
+          <option>Posts &amp; Columns</option><option>Misc</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Adjustment</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="bulk_op" style="width:80px">
+            <option value="increase">+ Increase</option>
+            <option value="decrease">− Decrease</option>
+          </select>
+          <input type="number" id="bulk_pct" min="0.1" max="100" step="0.1" style="width:80px" placeholder="%">
+          <span style="font-size:13px;color:var(--muted)">percent on the <strong>Price</strong> field only</span>
+        </div>
+      </div>
+      <div style="background:#fff7e0;border:1px solid #f0c040;border-radius:6px;padding:10px;font-size:12px;color:#7a5a00;margin-top:8px">
+        ⚠️ This updates live prices in the database immediately and cannot be undone automatically. Make sure of the percentage before saving.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('bulkModal')">Cancel</button>
+      <button class="btn btn-danger" onclick="applyBulkPrice()">Apply Price Change</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ TEMPLATE EDITOR MODAL -->
+<div class="modal-overlay hidden" id="templateModal">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-header">
+      <h3 id="templateModalTitle">Edit Template</h3>
+      <button class="modal-close" onclick="closeModal('templateModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="tm_id">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Template ID (slug)</label>
+          <input type="text" id="tm_slug" placeholder="e.g. gaf-hdz">
+        </div>
+        <div class="form-group">
+          <label>Display Name</label>
+          <input type="text" id="tm_name">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Label (shown on card)</label>
+          <input type="text" id="tm_label">
+        </div>
+        <div class="form-group">
+          <label>Type</label>
+          <select id="tm_type">
+            <option value="roof">Roof</option>
+            <option value="siding">Siding</option>
+            <option value="windows">Windows</option>
+            <option value="doors">Doors</option>
+            <option value="gutters">Gutters</option>
+            <option value="roof_comparison">Roofing — 3-Tier Comparison</option>
+            <option value="alside_comparison">Siding — 3-Tier Comparison</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Timeline</label>
+        <input type="text" id="tm_timeline" placeholder="e.g. 4 to 6 weeks from final measure">
+      </div>
+      <div class="form-group">
+        <label>Project Description</label>
+        <textarea id="tm_description" style="min-height:100px"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Warranty (Base — shown when no upgrade selected)</label>
+        <textarea id="tm_warrantyBase" style="min-height:60px"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Warranty Upgrade — shown only when upgrade product is in quote (leave blank if no upgrade)</label>
+        <textarea id="tm_warranty" style="min-height:60px"></textarea>
+      </div>
+
+      <hr style="margin:16px 0;border-color:var(--border)">
+
+      <!-- PROPOSAL DESIGNER -->
+      <strong style="font-size:13px">Proposal Designer</strong>
+      <div style="font-size:11px;color:var(--muted);margin:4px 0 10px">Controls which pages appear in the estimate proposal &amp; signed contract, and their order. This is what the estimator actually renders.</div>
+      <div class="form-group">
+        <label>Proposal theme</label>
+        <select id="tm_theme" onchange="dzThemeChange()">
+          <option value="classic">Classic</option>
+          <option value="renew2026">Renew 2026</option>
+        </select>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;margin:6px 0 10px;cursor:pointer">
+        <input type="checkbox" id="tm_customize" onchange="dzCustomizeToggle()"> Customize which pages appear &amp; their order
+      </label>
+      <div id="dzPanel" style="display:none">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Reorder with ▲▼, remove with ✕. Cover and Authorization are required. Add a library PDF as its own page.</div>
+        <div class="section-list" id="dzList"></div>
+        <div style="margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="dzOpenAdd()">+ Add Page</button></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('templateModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTemplate()">Save Template</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ADD PAGE MODAL -->
+<div class="modal-overlay hidden" id="sectionModal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h3>Add Page</h3>
+      <button class="modal-close" onclick="closeModal('sectionModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Page</label>
+        <select id="dzAddSelect" onchange="dzAddChange()"></select>
+      </div>
+      <div class="form-group" id="dzPdfGroup" style="display:none">
+        <label>PDF from library</label>
+        <select id="dzPdfSelect"></select>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Its pages are embedded into the proposal. Upload PDFs in the PDF Library tab.</div>
+      </div>
+      <div class="form-group" id="dzImgGroup" style="display:none">
+        <label>Image URL</label>
+        <input type="text" id="dzImgSrc" placeholder="https://…/page.png">
+        <label style="margin-top:8px">Caption (optional)</label>
+        <input type="text" id="dzImgCap" placeholder="">
+      </div>
+      <div class="form-group" id="dzHeadGroup" style="display:none">
+        <label>Heading text</label>
+        <input type="text" id="dzHeadText" placeholder="Section heading">
+      </div>
+      <div class="form-group" id="dzHtmlGroup" style="display:none">
+        <label>Custom HTML (supports {{customer.name}}, {{quote.total}}, …)</label>
+        <textarea id="dzHtml" style="min-height:90px"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer" id="dzAddFooter" style="display:none">
+      <button class="btn btn-ghost" onclick="closeModal('sectionModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="dzAddSelected()">Add Page</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ FINANCING PROVIDER MODAL -->
+<div class="modal-overlay hidden" id="financingModal">
+  <div class="modal" style="max-width:720px">
+    <div class="modal-header">
+      <h3 id="finModalTitle">Edit Provider</h3>
+      <button class="modal-close" onclick="closeModal('financingModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="fin_id">
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Provider Name</label>
+          <input type="text" id="fin_name" placeholder="e.g. Service Finance">
+        </div>
+        <div class="form-group">
+          <label>Active</label>
+          <select id="fin_active"><option value="true">Yes</option><option value="false">No</option></select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Notes (internal — rep contact info, vendor numbers, etc.)</label>
+        <textarea id="fin_notes" style="min-height:60px" placeholder="e.g. Contact: Merrissa 440-777-0012, Vendor #1042-5804"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Logo</label>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div id="fin_logo_preview" style="max-height:60px;overflow:hidden"></div>
+          <div>
+            <input type="file" id="fin_logo_file" accept="image/*" style="border:none;padding:0;background:none;font-size:12px">
+            <div style="font-size:10px;color:var(--muted);margin-top:2px">PNG, JPG or SVG. Replaces current logo.</div>
+          </div>
+        </div>
+      </div>
+
+      <hr style="margin:16px 0;border-color:var(--border)">
+
+      <!-- PLANS TABLE -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <strong style="font-size:13px">Financing Plans</strong>
+        <button class="btn btn-ghost btn-sm" onclick="addFinPlanRow()">+ Add Plan</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px">
+        Each plan appears as an option when reps add financing to an estimate. Term in <em>years</em> (e.g. 84 months = 7 years).
+      </div>
+
+      <div style="background:var(--light);border-radius:8px;overflow:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12px" id="finPlansTable">
+          <thead>
+            <tr>
+              <th style="padding:8px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;color:var(--muted);border-bottom:2px solid var(--border)">Plan Description</th>
+              <th style="padding:8px;text-align:left;width:80px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;color:var(--muted);border-bottom:2px solid var(--border)">Term (yrs)</th>
+              <th style="padding:8px;text-align:left;width:80px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;color:var(--muted);border-bottom:2px solid var(--border)">Rate %</th>
+              <th style="padding:8px;text-align:left;width:110px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;color:var(--muted);border-bottom:2px solid var(--border)">State</th>
+              <th style="padding:8px;width:36px;border-bottom:2px solid var(--border)"></th>
+            </tr>
+          </thead>
+          <tbody id="finPlansBody">
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('financingModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProvider()">Save Provider</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<!-- INVITE USER MODAL -->
+<div class="modal-overlay hidden" id="inviteModal">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <h3>Invite Team Member</h3>
+      <button class="modal-close" onclick="closeModal('inviteModal')">×</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+      <div class="form-group" style="margin:0">
+        <label>Full Name</label>
+        <input type="text" id="inv_name" placeholder="Jane Smith" style="width:100%">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Email Address</label>
+        <input type="email" id="inv_email" placeholder="jane@example.com" style="width:100%">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Phone (optional)</label>
+        <input type="text" id="inv_phone" placeholder="555-867-5309" style="width:100%">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Role</label>
+        <select id="inv_role" style="width:100%">
+          <option value="user">User — basic, own quotes only, no reports</option>
+          <option value="director">Director of Sales — all quotes, reports, margins</option>
+          <option value="admin">Admin — full platform + user management</option>
+          <option value="super_admin">Super Admin — all features</option>
+        </select>
+      </div>
+      <div id="inv_status" style="font-size:12px;color:var(--muted);display:none"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('inviteModal')">Cancel</button>
+      <button class="btn btn-accent" id="inv_btn" onclick="sendInvite()">Send Invite Email</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// SUPABASE
+// ═══════════════════════════════════════════════════════════════════
+const SUPABASE_URL      = 'https://chnkkcdstxtfnoqelwgz.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_cQ1hnPv5r5N6gmJq8CLmMw_rP_RNiSA';
+// persistSession:false stops the client reading localStorage on init —
+// prevents the internal getUser() call that causes ES256 token 401s.
+const _supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+});
+
+// Read the session stored by PricingEstimator.html (Supabase default key)
+function readStoredSession() {
+  try {
+    const raw = localStorage.getItem('sb-chnkkcdstxtfnoqelwgz-auth-token');
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+let currentSession = null;
+let allProducts     = [];
+let allTemplates    = [];
+let editingSections = [];   // working copy for template builder
+let pendingBlockType = null;
+
+// ═══════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════
+async function init() {
+  const session = readStoredSession();
+  if (!session?.access_token) { window.location.href = 'PricingEstimator.html'; return; }
+  currentSession = session;
+
+  // Verify admin/super_admin/platform_owner role
+  const res = await dbFetch('/rest/v1/users?select=role,name&id=eq.' + session.user.id + '&limit=1');
+  const ud   = await res.json();
+  const ADMIN_ROLES = ['admin', 'super_admin', 'platform_owner'];
+  if (!ud?.[0] || !ADMIN_ROLES.includes(ud[0].role)) {
+    window.location.href = 'PricingEstimator.html';
+    return;
+  }
+  window._userRole = ud[0].role;
+
+  document.getElementById('adminUserName').textContent =
+    session.user.user_metadata?.full_name || session.user.email;
+  if (window._userRole === 'platform_owner') {
+    document.getElementById('platformLink').style.display = '';
+  }
+  document.getElementById('loadingGate').style.display = 'none';
+  document.getElementById('adminApp').style.display     = 'block';
+
+  loadProducts();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════════
+function dbFetch(path, opts = {}) {
+  const headers = {
+    'apikey':        SUPABASE_ANON_KEY,
+    'Authorization': 'Bearer ' + currentSession.access_token,
+    'Content-Type':  'application/json',
+    ...opts.headers
+  };
+  return fetch(SUPABASE_URL + path, { ...opts, headers });
+}
+
+function showTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  document.getElementById('tab-btn-' + name).classList.add('active');
+  if (name === 'products')  loadProducts();
+  if (name === 'templates') loadTemplates();
+  if (name === 'users')     loadUsers();
+  if (name === 'pdfs')      loadPDFLibrary();
+  if (name === 'financing') loadFinancing();
+}
+
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+function openModal(id)  { document.getElementById(id).classList.remove('hidden'); }
+
+function toast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show' + (isError ? ' error' : '');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => { t.className = ''; }, 3000);
+}
+
+async function handleLogout() {
+  localStorage.removeItem('sb-chnkkcdstxtfnoqelwgz-auth-token');
+  try { await _supa.auth.signOut(); } catch {}
+  window.location.href = 'PricingEstimator.html';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PRODUCTS
+// ═══════════════════════════════════════════════════════════════════
+async function loadProducts() {
+  const res  = await dbFetch('/rest/v1/products?select=*&order=cat.asc,sort_order.asc,name.asc');
+  allProducts = await res.json();
+  buildCatFilter();
+  renderProducts();
+}
+
+function buildCatFilter() {
+  const cats = [...new Set(allProducts.map(p => p.cat))].sort();
+  const sel  = document.getElementById('catFilter');
+  sel.innerHTML = '<option value="">All Categories</option>' +
+    cats.map(c => `<option>${c}</option>`).join('');
+}
+
+function filterProducts() {
+  const q   = document.getElementById('productSearch').value.toLowerCase();
+  const cat = document.getElementById('catFilter').value;
+  const filtered = allProducts.filter(p =>
+    (!cat || p.cat === cat) &&
+    (!q   || p.name.toLowerCase().includes(q))
+  );
+  renderProducts(filtered);
+}
+
+function renderProducts(list) {
+  const data = list || allProducts;
+  const tbody = document.getElementById('productsBody');
+  if (!data.length) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;color:#999">No products found</td></tr>'; return; }
+
+  let html = '';
+  let lastCat = null;
+  data.forEach(p => {
+    if (p.cat !== lastCat) {
+      html += `<tr class="cat-header"><td colspan="9">${p.cat}</td></tr>`;
+      lastCat = p.cat;
+    }
+    const price  = p.price  != null ? '$' + parseFloat(p.price).toFixed(2)  : '—';
+    const mat    = p.mat    != null ? '$' + parseFloat(p.mat).toFixed(2)    : '—';
+    const labor  = p.labor  != null ? '$' + parseFloat(p.labor).toFixed(2)  : '—';
+    const margin = p.margin != null ? parseFloat(p.margin).toFixed(1) + '%' : '—';
+    html += `
+      <tr>
+        <td><strong>${p.name}</strong></td>
+        <td>${p.unit}</td>
+        <td>${price}</td>
+        <td style="color:var(--muted)">${mat}</td>
+        <td style="color:var(--muted)">${labor}</td>
+        <td style="color:var(--muted)">${margin}</td>
+        <td>${p.tax === 'y' ? '✓' : ''}</td>
+        <td><span class="${p.active ? 'badge-active' : 'badge-inactive'}">${p.active ? 'Active' : 'Inactive'}</span></td>
+        <td>
+          <button class="btn btn-ghost btn-sm" onclick='openEditProduct(${JSON.stringify(p.id)})'>Edit</button>
+          <button class="btn btn-sm ${p.active ? 'btn-ghost' : 'btn-success'}" onclick='toggleActive(${JSON.stringify(p.id)}, ${!p.active})'>
+            ${p.active ? 'Deactivate' : 'Activate'}
+          </button>
+        </td>
+      </tr>`;
+  });
+  tbody.innerHTML = html;
+}
+
+function openAddProduct() {
+  document.getElementById('productModalTitle').textContent = 'Add Product';
+  ['pm_id','pm_name','pm_price','pm_mat','pm_labor','pm_margin'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('pm_cat').value    = 'Roofing';
+  document.getElementById('pm_unit').value   = 'SQ';
+  document.getElementById('pm_tax').value    = 'n';
+  document.getElementById('pm_active').value = 'true';
+  openModal('productModal');
+}
+
+function openEditProduct(id) {
+  const p = allProducts.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('productModalTitle').textContent = 'Edit Product';
+  document.getElementById('pm_id').value     = p.id;
+  document.getElementById('pm_name').value   = p.name;
+  document.getElementById('pm_cat').value    = p.cat;
+  document.getElementById('pm_unit').value   = p.unit;
+  document.getElementById('pm_price').value  = p.price  ?? '';
+  document.getElementById('pm_mat').value    = p.mat    ?? '';
+  document.getElementById('pm_labor').value  = p.labor  ?? '';
+  document.getElementById('pm_margin').value = p.margin ?? '';
+  document.getElementById('pm_tax').value    = p.tax    || 'n';
+  document.getElementById('pm_active').value = p.active ? 'true' : 'false';
+  openModal('productModal');
+}
+
+async function saveProduct() {
+  const id     = document.getElementById('pm_id').value;
+  const name   = document.getElementById('pm_name').value.trim();
+  if (!name) { toast('Product name is required', true); return; }
+
+  const payload = {
+    name,
+    cat:    document.getElementById('pm_cat').value,
+    unit:   document.getElementById('pm_unit').value,
+    price:  parseFloat(document.getElementById('pm_price').value)  || 0,
+    mat:    document.getElementById('pm_mat').value    ? parseFloat(document.getElementById('pm_mat').value)    : null,
+    labor:  document.getElementById('pm_labor').value  ? parseFloat(document.getElementById('pm_labor').value)  : null,
+    margin: document.getElementById('pm_margin').value ? parseFloat(document.getElementById('pm_margin').value) : null,
+    tax:    document.getElementById('pm_tax').value,
+    active: document.getElementById('pm_active').value === 'true',
+    tenant_id: '5249f9c0-9fca-46c8-896c-4e35be437024'
+  };
+
+  if (id) {
+    // Update
+    const res = await dbFetch('/rest/v1/products?id=eq.' + id, {
+      method: 'PATCH', body: JSON.stringify(payload),
+      headers: { 'Prefer': 'return=minimal' }
+    });
+    if (!res.ok) { toast('Save failed: ' + res.status, true); return; }
+    toast('Product updated ✓');
+  } else {
+    // Insert — generate a short UUID-style ID
+    payload.id = crypto.randomUUID().split('-')[0] + crypto.randomUUID().split('-')[0];
+    const res = await dbFetch('/rest/v1/products', {
+      method: 'POST', body: JSON.stringify(payload),
+      headers: { 'Prefer': 'return=minimal' }
+    });
+    if (!res.ok) { toast('Add failed: ' + res.status, true); return; }
+    toast('Product added ✓');
+  }
+  closeModal('productModal');
+  loadProducts();
+}
+
+async function toggleActive(id, newActive) {
+  const res = await dbFetch('/rest/v1/products?id=eq.' + id, {
+    method: 'PATCH',
+    body: JSON.stringify({ active: newActive }),
+    headers: { 'Prefer': 'return=minimal' }
+  });
+  if (!res.ok) { toast('Update failed', true); return; }
+  toast(newActive ? 'Product activated ✓' : 'Product deactivated ✓');
+  loadProducts();
+}
+
+function openBulkPrice() { openModal('bulkModal'); }
+
+async function applyBulkPrice() {
+  const cat = document.getElementById('bulk_cat').value;
+  const op  = document.getElementById('bulk_op').value;
+  const pct = parseFloat(document.getElementById('bulk_pct').value);
+  if (!pct || pct <= 0) { toast('Enter a valid percentage', true); return; }
+
+  const factor = op === 'increase' ? (1 + pct / 100) : (1 - pct / 100);
+  const targets = allProducts.filter(p => (!cat || p.cat === cat) && p.active);
+
+  let ok = 0;
+  for (const p of targets) {
+    const newPrice = Math.round(parseFloat(p.price) * factor * 100) / 100;
+    const res = await dbFetch('/rest/v1/products?id=eq.' + p.id, {
+      method: 'PATCH',
+      body: JSON.stringify({ price: newPrice }),
+      headers: { 'Prefer': 'return=minimal' }
+    });
+    if (res.ok) ok++;
+  }
+  toast(`Updated ${ok} of ${targets.length} products ✓`);
+  closeModal('bulkModal');
+  loadProducts();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TEMPLATES
+// ═══════════════════════════════════════════════════════════════════
+async function loadTemplates() {
+  const res    = await dbFetch('/rest/v1/templates?select=*&order=sort_order.asc,name.asc');
+  allTemplates = await res.json();
+  renderTemplates();
+}
+
+function renderTemplates() {
+  const grid = document.getElementById('templatesGrid');
+  if (!allTemplates.length) { grid.innerHTML = '<div style="color:#999;padding:20px">No templates found</div>'; return; }
+
+  const typeEmoji = { roof:'🏠', siding:'🏗️', windows:'🪟', doors:'🚪', gutters:'🌧️' };
+  grid.innerHTML = allTemplates.map(t => {
+    const td = t.template_data || {};
+    const secCount = (td.sections || []).length;
+    const emoji = typeEmoji[td.type] || '📋';
+    return `
+      <div class="tpl-card" onclick="openEditTemplate('${t.id}')">
+        <h4>${emoji} ${t.name}</h4>
+        <div class="tpl-type">${td.type || 'template'}</div>
+        <div style="font-size:12px;color:var(--text);line-height:1.4;max-height:40px;overflow:hidden;text-overflow:ellipsis">
+          ${td.label || ''}
+        </div>
+        <div class="tpl-meta">
+          📅 ${td.timeline || '—'}<br>
+          🧱 ${secCount > 0 ? secCount + ' sections' : 'No sections defined yet'}
+        </div>
+        <div style="margin-top:10px">
+          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openEditTemplate('${t.id}')">✏️ Edit</button>
+          <span class="${t.active ? 'badge-active' : 'badge-inactive'}" style="margin-left:6px">${t.active ? 'Active' : 'Inactive'}</span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function openAddTemplate() {
+  document.getElementById('templateModalTitle').textContent = 'New Template';
+  ['tm_id','tm_slug','tm_name','tm_label','tm_timeline','tm_description','tm_warrantyBase','tm_warranty'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('tm_type').value = 'roof';
+  dzInit(null);
+  openModal('templateModal');
+}
+
+function openEditTemplate(id) {
+  const t = allTemplates.find(x => x.id === id);
+  if (!t) return;
+  const td = t.template_data || {};
+  document.getElementById('templateModalTitle').textContent = 'Edit Template — ' + t.name;
+  document.getElementById('tm_id').value           = t.id;
+  document.getElementById('tm_slug').value         = t.id;
+  document.getElementById('tm_name').value         = t.name || '';
+  document.getElementById('tm_label').value        = td.label || '';
+  document.getElementById('tm_type').value         = td.type  || 'roof';
+  document.getElementById('tm_timeline').value     = td.timeline || '';
+  document.getElementById('tm_description').value  = td.description || '';
+  document.getElementById('tm_warrantyBase').value = td.warrantyBase || '';
+  document.getElementById('tm_warranty').value     = td.warranty || '';
+  dzInit(td);
+  openModal('templateModal');
+}
+
+function dzTheme_() { return document.getElementById('tm_theme').value; }
+
+const PAGE_CATALOG = {
+  cover:         { label: 'Cover',              classic: 'cover',         renew: 'cover2' },
+  intro:         { label: 'Intro / Why Us',     classic: 'intro',         renew: 'intro2' },
+  reviews:       { label: 'Reviews',            classic: 'reviews',       renew: null },
+  inspection:    { label: 'Inspection Report',  classic: 'inspection',    renew: 'inspection2' },
+  tiers:         { label: 'Comparison Tiers',   classic: 'product',       renew: 'tiers2' },
+  scope:         { label: 'Scope of Work',      classic: 'product',       renew: 'product2' },
+  pricing:       { label: 'Pricing',            classic: 'pricing',       renew: 'pricing2' },
+  expect:        { label: 'What to Expect',     classic: 'expect',        renew: null },
+  terms:         { label: 'Terms & Conditions', classic: 'terms1',        renew: 'terms2' },
+  terms_extra:   { label: 'Terms (page 2)',     classic: 'terms2',        renew: null },
+  terms_extra3:  { label: 'Terms (page 3)',     classic: 'terms3',        renew: null },
+  epa1:          { label: 'EPA Lead (1)',       classic: 'epa1',          renew: null },
+  epa2:          { label: 'EPA Lead (2)',       classic: 'epa2',          renew: null },
+  authorization: { label: 'Authorization',      classic: 'authorization', renew: 'authorization2' },
+};
+const REQUIRED_PAGES = ['cover', 'authorization'];
+const DEFAULT_PAGES = {
+  classic:   ['cover','intro','reviews','inspection','scope','pricing','expect','authorization','terms','terms_extra','terms_extra3','epa1','epa2'],
+  renew2026: ['cover','intro','inspection','scope','pricing','terms','authorization'],
+};
+let dzPages = [];
+
+function pageBlockName(key, theme) {
+  const c = PAGE_CATALOG[key]; if (!c) return null;
+  return theme === 'renew2026' ? c.renew : c.classic;
+}
+
+function dzInit(td) {
+  const theme = (td && td.proposalTheme === 'renew2026') ? 'renew2026' : 'classic';
+  document.getElementById('tm_theme').value = theme;
+  const hasBlocks = td && Array.isArray(td.documentBlocks) && td.documentBlocks.length;
+  document.getElementById('tm_customize').checked = !!hasBlocks;
+  dzPages = hasBlocks ? blocksToPages(td.documentBlocks, theme) : [];
+  dzSyncPanel();
+}
+function dzCustomizeToggle() {
+  if (document.getElementById('tm_customize').checked && !dzPages.length)
+    dzPages = DEFAULT_PAGES[dzTheme_()].map(k => ({ key: k }));
+  dzSyncPanel();
+}
+function dzThemeChange() {
+  const theme = dzTheme_();
+  dzPages = dzPages.filter(p => p.key === '__custom' || p.key === '__raw' || pageBlockName(p.key, theme) != null);
+  if (document.getElementById('tm_customize').checked && !dzPages.length)
+    dzPages = DEFAULT_PAGES[theme].map(k => ({ key: k }));
+  dzSyncPanel();
+}
+function dzSyncPanel() {
+  const on = document.getElementById('tm_customize').checked;
+  document.getElementById('dzPanel').style.display = on ? 'block' : 'none';
+  if (on) dzRender();
+}
+function dzRender() {
+  const el = document.getElementById('dzList');
+  if (!dzPages.length) { el.innerHTML = '<div style="font-size:12px;color:#999;text-align:center;padding:12px">No pages — click "+ Add Page".</div>'; return; }
+  const theme = dzTheme_();
+  el.innerHTML = dzPages.map((p, i) => {
+    let icon='📄', label, sub;
+    if (p.key === '__custom') {
+      icon = p.type==='pdf'?'📎':p.type==='image'?'🖼️':p.type==='heading'?'🔖':'✏️';
+      label = p.type==='pdf'?('PDF: '+(p.label||'attachment')):p.type==='image'?('Image'+(p.caption?' — '+p.caption:'')):p.type==='heading'?('Heading: '+(p.text||'')):'Custom HTML';
+      sub = p.type;
+    } else if (p.key === '__raw') { label='Custom block'; sub=String(p.raw); }
+    else { label=(PAGE_CATALOG[p.key]||{}).label||p.key; sub=pageBlockName(p.key,theme)||p.key; }
+    const req = REQUIRED_PAGES.includes(p.key);
+    return '<div class="section-item"><span class="s-icon">'+icon+'</span>'
+      +'<div style="flex:1"><div class="s-label">'+label+(req?' <span style="color:var(--muted);font-size:9px">(required)</span>':'')+'</div><div class="s-type">'+sub+'</div></div>'
+      +'<div class="s-actions">'
+      +'<button class="s-move" onclick="dzMove('+i+',-1)" '+(i===0?'disabled style=opacity:.3':'')+'>▲</button>'
+      +'<button class="s-move" onclick="dzMove('+i+',1)" '+(i===dzPages.length-1?'disabled style=opacity:.3':'')+'>▼</button>'
+      +'<button class="s-del" onclick="dzRemove('+i+')" '+(req?'disabled style=opacity:.3':'')+'>✕</button>'
+      +'</div></div>';
+  }).join('');
+}
+function dzMove(i, dir) { const j=i+dir; if (j<0||j>=dzPages.length) return; const t=dzPages[i]; dzPages[i]=dzPages[j]; dzPages[j]=t; dzRender(); }
+function dzRemove(i) { if (dzPages[i] && REQUIRED_PAGES.includes(dzPages[i].key)) return; dzPages.splice(i,1); dzRender(); }
+
+function dzOpenAdd() {
+  const theme = dzTheme_();
+  const used = new Set(dzPages.filter(p=>p.key!=='__custom'&&p.key!=='__raw').map(p=>p.key));
+  const opts = Object.keys(PAGE_CATALOG).filter(k=>pageBlockName(k,theme)!=null && !used.has(k))
+    .map(k=>'<option value="page:'+k+'">'+PAGE_CATALOG[k].label+'</option>').join('');
+  const custom = '<option value="custom:pdf">PDF from library…</option><option value="custom:image">Image page…</option><option value="custom:heading">Heading page…</option><option value="custom:html">Custom HTML page…</option>';
+  document.getElementById('dzAddSelect').innerHTML = '<option value="">— choose —</option>'+opts+'<optgroup label="Custom">'+custom+'</optgroup>';
+  document.getElementById('dzAddSelect').value=''; dzAddChange(); loadPDFLibraryForPicker(); openModal('sectionModal');
+}
+function dzAddChange() {
+  const v=document.getElementById('dzAddSelect').value;
+  document.getElementById('dzPdfGroup').style.display = v==='custom:pdf'?'block':'none';
+  document.getElementById('dzImgGroup').style.display = v==='custom:image'?'block':'none';
+  document.getElementById('dzHeadGroup').style.display= v==='custom:heading'?'block':'none';
+  document.getElementById('dzHtmlGroup').style.display= v==='custom:html'?'block':'none';
+  document.getElementById('dzAddFooter').style.display= v?'flex':'none';
+}
+async function loadPDFLibraryForPicker() {
+  try { if (!Array.isArray(allPDFs) || !allPDFs.length) await loadPDFLibrary(); } catch(e){}
+  const sel=document.getElementById('dzPdfSelect');
+  const list=(Array.isArray(allPDFs)?allPDFs:[]).filter(p=>p.active!==false);
+  sel.innerHTML = list.length ? list.map(p=>'<option value="'+p.id+'">'+((p.label||p.filename))+' — '+(p.category||'general')+'</option>').join('')
+    : '<option value="">(no PDFs in library — upload one in the PDF Library tab)</option>';
+}
+function dzAddSelected() {
+  const v=document.getElementById('dzAddSelect').value; if(!v) return;
+  if (v.indexOf('page:')===0) dzPages.push({key:v.slice(5)});
+  else if (v==='custom:pdf') {
+    const id=document.getElementById('dzPdfSelect').value;
+    const pdf=(allPDFs||[]).find(p=>String(p.id)===String(id));
+    if(!pdf){toast('Pick a PDF from the library',true);return;}
+    dzPages.push({key:'__custom',type:'pdf',src:pdf.storage_url,label:pdf.label||pdf.filename});
+  } else if (v==='custom:image') {
+    const src=document.getElementById('dzImgSrc').value.trim(); if(!src){toast('Image URL required',true);return;}
+    dzPages.push({key:'__custom',type:'image',src:src,caption:document.getElementById('dzImgCap').value.trim()});
+  } else if (v==='custom:heading') dzPages.push({key:'__custom',type:'heading',text:document.getElementById('dzHeadText').value.trim()});
+  else if (v==='custom:html') dzPages.push({key:'__custom',type:'html',html:document.getElementById('dzHtml').value});
+  dzRender(); closeModal('sectionModal');
+}
+
+function pagesToBlocks(pages, theme) {
+  const out=[];
+  pages.forEach(p=>{
+    if (p.key==='__raw') { out.push(p.raw); return; }
+    if (p.key==='__custom') {
+      if (p.type==='pdf') out.push({type:'pdf',src:p.src,label:p.label||''});
+      else if (p.type==='image') out.push({type:'image',src:p.src,caption:p.caption||''});
+      else if (p.type==='heading') out.push({type:'heading',text:p.text||''});
+      else if (p.type==='html') out.push({type:'custom_html',html:p.html||''});
+    } else { const name=pageBlockName(p.key,theme); if(name) out.push(name); }
+  });
+  return out;
+}
+function blocksToPages(blocks, theme) {
+  const pages=[];
+  blocks.forEach(b=>{
+    if (typeof b==='string') {
+      let key=null;
+      for (const k in PAGE_CATALOG){ if(pageBlockName(k,theme)===b){key=k;break;} }
+      if(!key) for (const k in PAGE_CATALOG){ if(PAGE_CATALOG[k].classic===b||PAGE_CATALOG[k].renew===b){key=k;break;} }
+      pages.push(key?{key:key}:{key:'__raw',raw:b});
+    } else if (b && typeof b==='object') {
+      if (b.type==='pdf') pages.push({key:'__custom',type:'pdf',src:b.src,label:b.label||''});
+      else if (b.type==='image') pages.push({key:'__custom',type:'image',src:b.src,caption:b.caption||''});
+      else if (b.type==='heading') pages.push({key:'__custom',type:'heading',text:b.text||''});
+      else if (b.type==='custom_html') pages.push({key:'__custom',type:'html',html:b.html||''});
+      else { let key=null; for(const k in PAGE_CATALOG){ if(PAGE_CATALOG[k].classic===b.type||PAGE_CATALOG[k].renew===b.type){key=k;break;} } pages.push(key?{key:key}:{key:'__raw',raw:b}); }
+    }
+  });
+  return pages;
+}
+function dzCollect() {
+  const theme=dzTheme_();
+  if (!document.getElementById('tm_customize').checked) return {valid:true, proposalTheme:theme, documentBlocks:null};
+  for (const req of REQUIRED_PAGES) if(!dzPages.some(p=>p.key===req))
+    return {valid:false, error:'The '+((PAGE_CATALOG[req]||{}).label)+' page is required.'};
+  return {valid:true, proposalTheme:theme, documentBlocks:pagesToBlocks(dzPages,theme)};
+}
+
+async function uploadTemplatePDF(file) {
+  // Route through the upload-pdf edge function (service role) — Storage rejects
+  // this project's ES256 user tokens on direct object writes.
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('mode', 'template');
+  const res = await fetch(SUPABASE_URL + '/functions/v1/upload-pdf', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + currentSession.access_token },
+    body: fd
+  });
+  const result = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    toast('PDF upload failed: ' + (result.error || res.status), true);
+    return null;
+  }
+  return { url: result.url, path: result.path };
+}
+
+async function saveTemplate() {
+  const id   = document.getElementById('tm_id').value.trim();
+  const slug = document.getElementById('tm_slug').value.trim();
+  const name = document.getElementById('tm_name').value.trim();
+  if (!slug || !name) { toast('Slug and name are required', true); return; }
+
+  // Fetch existing template_data to preserve fields we don't edit here
+  const existing    = allTemplates.find(t => t.id === id);
+  const existingTD  = existing?.template_data || {};
+  const dz = dzCollect();
+  if (!dz.valid) { toast(dz.error, true); return; }
+
+  // A comparison template (roof_comparison / alside_comparison) carries its behavior in its `type`.
+  // The plain Type dropdown must never overwrite that — otherwise the estimator routes its Auto-Fill
+  // to the wrong (roof vs siding) builder and the Scope of Work comes out wrong. Preserve it.
+  const _isCompareTpl = !!(existingTD.tiers || existingTD.isComparison ||
+    existingTD.type === 'roof_comparison' || existingTD.type === 'alside_comparison');
+
+  const template_data = {
+    ...existingTD,
+    id:           slug,
+    name,
+    label:        document.getElementById('tm_label').value.trim(),
+    type:         _isCompareTpl ? (existingTD.type || document.getElementById('tm_type').value)
+                                : document.getElementById('tm_type').value,
+    timeline:     document.getElementById('tm_timeline').value.trim(),
+    description:  document.getElementById('tm_description').value.trim(),
+    warrantyBase: document.getElementById('tm_warrantyBase').value.trim() || undefined,
+    warranty:     document.getElementById('tm_warranty').value.trim(),
+  };
+  if (dz.proposalTheme === 'renew2026') template_data.proposalTheme = 'renew2026';
+  else delete template_data.proposalTheme;
+  if (dz.documentBlocks) template_data.documentBlocks = dz.documentBlocks;
+  else delete template_data.documentBlocks;
+  delete template_data.sections;
+
+  if (id) {
+    // Update
+    const res = await dbFetch('/rest/v1/templates?id=eq.' + id, {
+      method: 'PATCH',
+      body: JSON.stringify({ name, template_data }),
+      headers: { 'Prefer': 'return=minimal' }
+    });
+    if (!res.ok) { toast('Save failed: ' + res.status, true); return; }
+    toast('Template saved ✓');
+  } else {
+    // Insert
+    const res = await dbFetch('/rest/v1/templates', {
+      method: 'POST',
+      body: JSON.stringify({
+        id: slug, name, template_data, active: true,
+        tenant_id: '5249f9c0-9fca-46c8-896c-4e35be437024', sort_order: 99
+      }),
+      headers: { 'Prefer': 'return=minimal' }
+    });
+    if (!res.ok) { toast('Add failed: ' + res.status, true); return; }
+    toast('Template created ✓');
+  }
+  closeModal('templateModal');
+  loadTemplates();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// USERS
+// ═══════════════════════════════════════════════════════════════════
+let _quoteCounts = {};
+
+async function loadUsers() {
+  // Load users + quote counts in parallel
+  const [usersRes, quotesRes] = await Promise.all([
+    dbFetch('/rest/v1/users?select=*&order=name.asc'),
+    dbFetch('/rest/v1/quotes?select=created_by,assigned_rep_id')
+  ]);
+  const users  = await usersRes.json();
+  const quotes = await quotesRes.json().catch(() => []);
+
+  // Build counts: rep owns a quote if created_by OR assigned_rep_id matches
+  _quoteCounts = {};
+  (Array.isArray(quotes) ? quotes : []).forEach(q => {
+    if (q.created_by)       _quoteCounts[q.created_by]       = (_quoteCounts[q.created_by]       || 0) + 1;
+    if (q.assigned_rep_id && q.assigned_rep_id !== q.created_by) {
+      _quoteCounts[q.assigned_rep_id] = (_quoteCounts[q.assigned_rep_id] || 0) + 1;
+    }
+  });
+
+  const tbody = document.getElementById('usersBody');
+  if (!Array.isArray(users) || !users.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:#999">No users</td></tr>';
+    return;
+  }
+  tbody.innerHTML = users.map(u => `
+    <tr>
+      <td><strong>${escH(u.name || '—')}</strong></td>
+      <td style="font-size:12px">${escH(u.email)}</td>
+      <td style="font-size:12px;color:var(--muted)">${escH(u.phone || '—')}</td>
+      <td>
+        <select onchange="updateUserRole('${u.id}', this.value)" style="font-size:12px;padding:4px 6px">
+          <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
+          <option value="rep"   ${u.role === 'rep'   ? 'selected' : ''}>Rep</option>
+        </select>
+      </td>
+      <td style="text-align:center">
+        <a href="quotes.html?rep=${u.id}" style="font-size:12px;color:var(--accent);font-weight:700;text-decoration:none" title="View quotes">
+          ${_quoteCounts[u.id] || 0}
+        </a>
+      </td>
+      <td><span style="font-size:11px;font-weight:700;color:${u.active ? 'var(--success)' : 'var(--danger)'}">${u.active ? '● Active' : '○ Inactive'}</span></td>
+      <td>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-sm btn-ghost" onclick="editUserPhone('${u.id}','${escH(u.phone||'')}')">📞</button>
+          <button class="btn btn-sm ${u.active ? 'btn-ghost' : 'btn-success'}"
+            onclick="updateUserActive('${u.id}', ${!u.active})">
+            ${u.active ? 'Deactivate' : 'Activate'}
+          </button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function escH(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function openInviteModal() {
+  document.getElementById('inv_name').value  = '';
+  document.getElementById('inv_email').value = '';
+  document.getElementById('inv_phone').value = '';
+  document.getElementById('inv_role').value  = 'rep';
+  document.getElementById('inv_status').style.display = 'none';
+  document.getElementById('inv_btn').disabled = false;
+  document.getElementById('inviteModal').classList.remove('hidden');
+}
+
+async function sendInvite() {
+  const name  = document.getElementById('inv_name').value.trim();
+  const email = document.getElementById('inv_email').value.trim();
+  const phone = document.getElementById('inv_phone').value.trim();
+  const role  = document.getElementById('inv_role').value;
+  if (!email) { toast('Email is required', true); return; }
+
+  const statusEl = document.getElementById('inv_status');
+  const btn      = document.getElementById('inv_btn');
+  statusEl.textContent = 'Sending invite…';
+  statusEl.style.display = 'block';
+  btn.disabled = true;
+
+  const res = await fetch(SUPABASE_URL + '/functions/v1/invite-user', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + currentSession?.access_token
+    },
+    body: JSON.stringify({ name, email, phone, role })
+  });
+  const result = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    statusEl.textContent = result.error || 'Invite failed';
+    statusEl.style.color = 'var(--danger)';
+    btn.disabled = false;
+    return;
+  }
+  toast('Invite sent to ' + email + ' ✓');
+  closeModal('inviteModal');
+  loadUsers();
+}
+
+async function editUserPhone(id, current) {
+  const ph = prompt('Update phone number:', current);
+  if (ph === null) return;
+  const res = await dbFetch('/rest/v1/users?id=eq.' + id, {
+    method: 'PATCH', body: JSON.stringify({ phone: ph }),
+    headers: { 'Prefer': 'return=minimal' }
+  });
+  toast(res.ok ? 'Phone updated ✓' : 'Update failed', !res.ok);
+  if (res.ok) loadUsers();
+}
+
+async function updateUserRole(id, role) {
+  const res = await dbFetch('/rest/v1/users?id=eq.' + id, {
+    method: 'PATCH', body: JSON.stringify({ role }),
+    headers: { 'Prefer': 'return=minimal' }
+  });
+  toast(res.ok ? 'Role updated ✓' : 'Update failed', !res.ok);
+}
+
+async function updateUserActive(id, active) {
+  const res = await dbFetch('/rest/v1/users?id=eq.' + id, {
+    method: 'PATCH', body: JSON.stringify({ active }),
+    headers: { 'Prefer': 'return=minimal' }
+  });
+  if (!res.ok) { toast('Update failed', true); return; }
+  toast(active ? 'User activated ✓' : 'User deactivated ✓');
+  loadUsers();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// FINANCING
+// ═══════════════════════════════════════════════════════════════════
+let allProviders = [];
+let editingPlans = [];   // working copy for the modal
+
+async function loadFinancing() {
+  const res = await dbFetch('/rest/v1/financing_providers?select=*,plans:financing_plans(*)&order=sort_order.asc,name.asc');
+  allProviders = await res.json();
+  if (!Array.isArray(allProviders)) allProviders = [];
+  renderFinancingGrid();
+}
+
+function renderFinancingGrid() {
+  const grid = document.getElementById('financingGrid');
+  if (!allProviders.length) {
+    grid.innerHTML = '<div style="color:#999;padding:20px">No providers found. Click "+ Add Provider".</div>';
+    return;
+  }
+  grid.innerHTML = allProviders.map(p => {
+    const planCount = (p.plans || []).length;
+    const logoHtml  = p.logo_url
+      ? `<img src="${p.logo_url}" style="max-height:40px;max-width:120px;object-fit:contain;margin-bottom:8px;display:block">`
+      : `<div style="font-size:28px;margin-bottom:8px">🏦</div>`;
+    return `
+    <div class="tpl-card${p.active ? '' : '" style="opacity:.5'}" onclick="openEditProvider('${p.id}')">
+      ${logoHtml}
+      <h4>${p.name}</h4>
+      <div class="tpl-type">Financing Provider</div>
+      <div class="tpl-meta">${planCount} plan${planCount !== 1 ? 's' : ''} · ${p.active ? 'Active' : 'Inactive'}</div>
+      ${p.name === 'Sunlight Financial' ? '<div style="font-size:10px;color:var(--accent);margin-top:4px;font-weight:600">⚡ Integrated — configure plans here, integration handled separately</div>' : ''}
+    </div>`;
+  }).join('');
+}
+
+function openAddProvider() {
+  document.getElementById('finModalTitle').textContent = 'Add Provider';
+  document.getElementById('fin_id').value      = '';
+  document.getElementById('fin_name').value    = '';
+  document.getElementById('fin_notes').value   = '';
+  document.getElementById('fin_active').value  = 'true';
+  document.getElementById('fin_logo_preview').innerHTML = '';
+  document.getElementById('fin_logo_file').value = '';
+  editingPlans = [];
+  renderFinPlansTable();
+  openModal('financingModal');
+}
+
+function openEditProvider(id) {
+  const p = allProviders.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('finModalTitle').textContent = 'Edit Provider — ' + p.name;
+  document.getElementById('fin_id').value     = p.id;
+  document.getElementById('fin_name').value   = p.name;
+  document.getElementById('fin_notes').value  = p.notes || '';
+  document.getElementById('fin_active').value = p.active ? 'true' : 'false';
+  document.getElementById('fin_logo_file').value = '';
+  document.getElementById('fin_logo_preview').innerHTML = p.logo_url
+    ? `<img src="${p.logo_url}" style="max-height:60px;max-width:160px;object-fit:contain">`
+    : '';
+  // Deep-copy plans
+  editingPlans = JSON.parse(JSON.stringify(p.plans || [])).sort((a, b) => a.sort_order - b.sort_order);
+  renderFinPlansTable();
+  openModal('financingModal');
+}
+
+function renderFinPlansTable() {
+  const tbody = document.getElementById('finPlansBody');
+  if (!editingPlans.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:12px;color:#999;font-size:12px">No plans yet — click "+ Add Plan"</td></tr>';
+    return;
+  }
+  tbody.innerHTML = editingPlans.map((pl, i) => `
+    <tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:6px 8px;vertical-align:top">
+        <textarea rows="3" style="width:100%;font-size:12px;padding:5px;border:1px solid var(--border);border-radius:4px;resize:vertical"
+          onchange="editingPlans[${i}].description=this.value">${escHtml(pl.description || '')}</textarea>
+      </td>
+      <td style="padding:6px 8px;vertical-align:top">
+        <input type="number" step="0.5" min="0" style="width:70px;font-size:12px;padding:5px;border:1px solid var(--border);border-radius:4px"
+          value="${pl.term_years ?? ''}" onchange="editingPlans[${i}].term_years=parseFloat(this.value)||null">
+      </td>
+      <td style="padding:6px 8px;vertical-align:top">
+        <input type="number" step="0.01" min="0" max="100" style="width:70px;font-size:12px;padding:5px;border:1px solid var(--border);border-radius:4px"
+          value="${pl.rate ?? 0}" onchange="editingPlans[${i}].rate=parseFloat(this.value)||0">
+      </td>
+      <td style="padding:6px 8px;vertical-align:top">
+        <select style="font-size:12px;padding:5px;border:1px solid var(--border);border-radius:4px"
+          onchange="editingPlans[${i}].state=this.value">
+          <option ${(pl.state||'Ohio (OH)')===''?'selected':''}>Ohio (OH)</option>
+          <option ${pl.state==='All States'?'selected':''}>All States</option>
+        </select>
+      </td>
+      <td style="padding:6px 8px;vertical-align:middle;text-align:center">
+        <button class="s-del" title="Remove" onclick="removeFinPlan(${i})">✕</button>
+      </td>
+    </tr>`).join('');
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function addFinPlanRow() {
+  editingPlans.push({
+    id: null,
+    description: '',
+    term_years: null,
+    rate: 0,
+    state: 'Ohio (OH)',
+    active: true,
+    sort_order: editingPlans.length + 1
+  });
+  renderFinPlansTable();
+}
+
+function removeFinPlan(idx) {
+  editingPlans.splice(idx, 1);
+  renderFinPlansTable();
+}
+
+async function saveProvider() {
+  const id     = document.getElementById('fin_id').value.trim();
+  const name   = document.getElementById('fin_name').value.trim();
+  const notes  = document.getElementById('fin_notes').value.trim();
+  const active = document.getElementById('fin_active').value === 'true';
+  if (!name) { toast('Provider name is required', true); return; }
+
+  // Upload logo if selected
+  let logo_url = null;
+  let logo_storage_path = null;
+  const logoFile = document.getElementById('fin_logo_file').files[0];
+  if (logoFile) {
+    const path = `financing/${Date.now()}_${logoFile.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
+    const upRes = await fetch(SUPABASE_URL + '/storage/v1/object/template-pdfs/' + path, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + currentSession.access_token,
+        'Content-Type': logoFile.type,
+        'x-upsert': 'true'
+      },
+      body: logoFile
+    });
+    if (upRes.ok) {
+      logo_url          = SUPABASE_URL + '/storage/v1/object/public/template-pdfs/' + path;
+      logo_storage_path = path;
+    } else {
+      toast('Logo upload failed: ' + upRes.status, true);
+    }
+  }
+
+  let providerId = id;
+
+  if (id) {
+    // Update existing provider
+    const payload = { name, notes, active };
+    if (logo_url) { payload.logo_url = logo_url; payload.logo_storage_path = logo_storage_path; }
+    const res = await dbFetch('/rest/v1/financing_providers?id=eq.' + id, {
+      method: 'PATCH', body: JSON.stringify(payload),
+      headers: { 'Prefer': 'return=minimal' }
+    });
+    if (!res.ok) { toast('Save failed: ' + res.status, true); return; }
+  } else {
+    // Insert new provider
+    const payload = {
+      tenant_id: '5249f9c0-9fca-46c8-896c-4e35be437024',
+      name, notes, active, sort_order: 99
+    };
+    if (logo_url) { payload.logo_url = logo_url; payload.logo_storage_path = logo_storage_path; }
+    const res = await dbFetch('/rest/v1/financing_providers', {
+      method: 'POST', body: JSON.stringify(payload),
+      headers: { 'Prefer': 'return=representation' }
+    });
+    if (!res.ok) { toast('Add failed: ' + res.status, true); return; }
+    const row = await res.json();
+    providerId = row[0]?.id;
+  }
+
+  // Sync plans: delete all existing, re-insert
+  if (providerId) {
+    await dbFetch('/rest/v1/financing_plans?provider_id=eq.' + providerId, {
+      method: 'DELETE', headers: { 'Prefer': 'return=minimal' }
+    });
+    if (editingPlans.length) {
+      const planRows = editingPlans.map((pl, i) => ({
+        provider_id:  providerId,
+        description:  pl.description,
+        term_years:   pl.term_years,
+        rate:         pl.rate,
+        state:        pl.state || 'Ohio (OH)',
+        active:       pl.active !== false,
+        sort_order:   i + 1
+      }));
+      await dbFetch('/rest/v1/financing_plans', {
+        method: 'POST', body: JSON.stringify(planRows),
+        headers: { 'Prefer': 'return=minimal' }
+      });
+    }
+  }
+
+  toast('Provider saved ✓');
+  closeModal('financingModal');
+  loadFinancing();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PDF LIBRARY
+// ═══════════════════════════════════════════════════════════════════
+let allPDFs = [];
+
+async function loadPDFLibrary() {
+  const res = await dbFetch(
+    '/rest/v1/pdf_library?select=*&order=category.asc,label.asc'
+  );
+  allPDFs = await res.json();
+  if (!Array.isArray(allPDFs)) allPDFs = [];
+  renderPDFLibrary();
+}
+
+function renderPDFLibrary() {
+  const catFilter    = document.getElementById('pdfCatFilter').value;
+  const showInactive = document.getElementById('pdfShowInactive').checked;
+  const grid         = document.getElementById('pdfGrid');
+
+  let list = allPDFs.filter(p =>
+    (!catFilter || p.category === catFilter) &&
+    (showInactive || p.active)
+  );
+
+  if (!list.length) {
+    grid.innerHTML = '<div style="color:#999;padding:20px">No PDFs found' +
+      (catFilter ? ' in this category' : '') + '. Upload one above.</div>';
+    return;
+  }
+
+  grid.innerHTML = list.map(p => {
+    const kb  = p.file_size ? Math.round(p.file_size / 1024) + ' KB' : '';
+    const catCls = 'cat-' + (p.category || 'general');
+    return `
+    <div class="pdf-card${p.active ? '' : ' inactive'}" id="pdfcard-${p.id}">
+      <div class="pdf-card-top">
+        <div class="pdf-icon">📄</div>
+        <div class="pdf-info">
+          <div class="pdf-label" title="${p.label}">${p.label}</div>
+          <div class="pdf-filename" title="${p.filename}">${p.filename}</div>
+        </div>
+      </div>
+      <div class="pdf-meta">
+        <span class="cat-badge ${catCls}">${p.category || 'general'}</span>
+        ${kb ? `<span style="font-size:10px;color:var(--muted)">${kb}</span>` : ''}
+        ${!p.active ? '<span style="font-size:10px;color:var(--danger)">Inactive</span>' : ''}
+      </div>
+      <div class="pdf-actions">
+        <a href="${p.storage_url}" target="_blank" class="btn btn-ghost btn-sm">👁 View</a>
+        <button class="btn btn-sm ${p.active ? 'btn-ghost' : 'btn-success'}"
+          onclick="togglePDFActive('${p.id}', ${!p.active})">
+          ${p.active ? 'Deactivate' : 'Activate'}
+        </button>
+        <button class="btn btn-danger btn-sm" onclick="deletePDF('${p.id}', '${p.storage_path}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function uploadPDF() {
+  const file  = document.getElementById('ul_file').files[0];
+  const label = document.getElementById('ul_label').value.trim();
+  const cat   = document.getElementById('ul_cat').value;
+
+  if (!file)  { toast('Please select a PDF file', true); return; }
+  if (!label) { toast('Please enter a display label', true); return; }
+
+  const btn    = document.getElementById('ul_btn');
+  const status = document.getElementById('ul_status');
+  btn.disabled = true;
+  status.textContent = 'Uploading…';
+
+  // Route through the upload-pdf edge function (service role) — it performs the
+  // storage write + pdf_library insert. Direct Storage writes are rejected for
+  // this project's ES256 user tokens.
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('mode', 'library');
+  fd.append('label', label);
+  fd.append('category', cat);
+
+  const res = await fetch(SUPABASE_URL + '/functions/v1/upload-pdf', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + currentSession.access_token },
+    body: fd
+  });
+  const result = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    toast(result.error || ('Upload failed: ' + res.status), true);
+  } else {
+    toast(`"${label}" uploaded ✓`);
+    document.getElementById('ul_label').value = '';
+    document.getElementById('ul_file').value  = '';
+    status.textContent = '';
+    loadPDFLibrary();
+  }
+  btn.disabled = false;
+}
+
+async function togglePDFActive(id, active) {
+  const res = await dbFetch('/rest/v1/pdf_library?id=eq.' + id, {
+    method: 'PATCH', body: JSON.stringify({ active }),
+    headers: { 'Prefer': 'return=minimal' }
+  });
+  if (!res.ok) { toast('Update failed', true); return; }
+  toast(active ? 'PDF activated ✓' : 'PDF deactivated ✓');
+  const pdf = allPDFs.find(p => p.id === id);
+  if (pdf) pdf.active = active;
+  renderPDFLibrary();
+}
+
+async function deletePDF(id, storagePath) {
+  if (!confirm('Delete this PDF from the library? This cannot be undone.')) return;
+
+  // 1. Remove from Storage
+  await fetch(SUPABASE_URL + '/storage/v1/object/template-pdfs/' + storagePath, {
+    method: 'DELETE',
+    headers: {
+      'apikey':        SUPABASE_ANON_KEY,
+      'Authorization': 'Bearer ' + currentSession.access_token
+    }
+  });
+
+  // 2. Remove DB record
+  const res = await dbFetch('/rest/v1/pdf_library?id=eq.' + id, {
+    method: 'DELETE', headers: { 'Prefer': 'return=minimal' }
+  });
+  if (!res.ok) { toast('Delete failed', true); return; }
+  toast('PDF deleted');
+  allPDFs = allPDFs.filter(p => p.id !== id);
+  renderPDFLibrary();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════════════════
+init();
+</script>
+</body>
+</html>

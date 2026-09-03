@@ -1,0 +1,29 @@
+{
+  "name": "Renew Home Exteriors Estimator",
+  "short_name": "RHE Estimator",
+  "description": "Pricing estimator and contract tool for Renew Home Exteriors",
+  "start_url": "/PricingEstimator.html",
+  "display": "standalone",
+  "background_color": "#1a3a5c",
+  "theme_color": "#1a3a5c",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Estimate",
+      "url": "/PricingEstimator.html",
+      "description": "Start a new pricing estimate"
+    },
+    {
+      "name": "Quote History",
+      "url": "/quotes.html",
+      "description": "View saved quotes"
+    }
+  ]
+}

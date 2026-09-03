@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quote History — Renew Home Exteriors</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+  :root {
+    --primary: #1a3a5c; --accent: #e8500a; --light: #f4f7fb;
+    --border: #d0d9e8; --success: #2a7a3b; --danger: #c0392b;
+    --text: #1e2a38; --muted: #6b7a90; --card: #ffffff;
+    --shadow: 0 2px 12px rgba(26,58,92,0.10);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--light); color: var(--text); font-size: 14px; }
+
+  /* HEADER */
+  header {
+    background: var(--primary); color: #fff;
+    padding: 0 28px; display: flex; align-items: center; gap: 14px; height: 54px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18); position: sticky; top: 0; z-index: 100;
+  }
+  header .logo { font-size: 16px; font-weight: 700; }
+  header .badge { background: var(--accent); color: #fff; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+  header .ml { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  header a, header button.link {
+    background: none; border: none; color: rgba(255,255,255,0.75);
+    font-size: 12px; cursor: pointer; text-decoration: none;
+    padding: 4px 11px; border-radius: 14px; transition: background 0.15s;
+  }
+  header a:hover, header button.link:hover { background: rgba(255,255,255,0.15); color: #fff; }
+  header .user { font-size: 12px; opacity: 0.8; }
+
+  /* PAGE NAV */
+  nav.page-nav {
+    background: #132d4a; display: flex; gap: 0; padding: 0 28px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  nav.page-nav a {
+    color: rgba(255,255,255,0.65); text-decoration: none; font-size: 12px; font-weight: 600;
+    padding: 9px 18px; display: block; border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+  }
+  nav.page-nav a.active { color: #fff; border-bottom-color: var(--accent); }
+  nav.page-nav a:hover:not(.active) { color: #fff; }
+
+  /* property link in table */
+  .prop-link { color: var(--accent); text-decoration: none; font-weight: 700; }
+  .prop-link:hover { text-decoration: underline; }
+
+  /* CONTENT */
+  .page { padding: 24px 28px; }
+
+  /* STATS */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+  .stat-card {
+    background: var(--card); border-radius: 10px; border: 1px solid var(--border);
+    padding: 16px 18px; box-shadow: var(--shadow);
+  }
+  .stat-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 6px; }
+  .stat-value { font-size: 26px; font-weight: 800; color: var(--primary); }
+  .stat-sub   { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+  /* FILTERS */
+  .filter-bar {
+    background: var(--card); border-radius: 10px; border: 1px solid var(--border);
+    padding: 12px 16px; margin-bottom: 16px; box-shadow: var(--shadow);
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  }
+  .filter-bar input, .filter-bar select {
+    padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px;
+    font-size: 12px; color: var(--text); background: #fff;
+  }
+  .filter-bar input:focus, .filter-bar select:focus { outline: none; border-color: var(--primary); }
+  .filter-bar .search-wrap { position: relative; flex: 1; min-width: 180px; }
+  .filter-bar .search-wrap input { width: 100%; padding-left: 28px; }
+  .filter-bar .search-icon { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); font-size: 13px; }
+  .filter-bar .ml { margin-left: auto; }
+
+  /* TABLE */
+  .tbl-card { background: var(--card); border-radius: 10px; border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th {
+    background: var(--light); padding: 10px 12px; text-align: left;
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
+    color: var(--muted); border-bottom: 2px solid var(--border); white-space: nowrap;
+    cursor: pointer; user-select: none;
+  }
+  th:hover { color: var(--primary); }
+  th .sort-arrow { opacity: 0.4; margin-left: 3px; }
+  th.sorted .sort-arrow { opacity: 1; color: var(--accent); }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f8fafd; }
+  .empty-row td { text-align: center; padding: 40px; color: var(--muted); }
+
+  /* BADGES */
+  .badge { padding: 3px 9px; border-radius: 10px; font-size: 10px; font-weight: 700; text-transform: capitalize; white-space: nowrap; }
+  .badge-draft   { background: #e2e8f0; color: #475569; }
+  .badge-sent    { background: #dbeafe; color: #1d4ed8; }
+  .badge-signed  { background: #d1fae5; color: #065f46; }
+  .badge-void    { background: #fee2e2; color: #991b1b; }
+
+  /* TYPE BADGES */
+  .type-badge { padding: 2px 7px; border-radius: 8px; font-size: 10px; font-weight: 600; }
+  .type-roof    { background: #fef3c7; color: #92400e; }
+  .type-siding  { background: #d1fae5; color: #065f46; }
+  .type-windows { background: #e0f2fe; color: #075985; }
+  .type-doors   { background: #fce7f3; color: #9d174d; }
+  .type-gutters { background: #f3f4f6; color: #374151; }
+
+  /* BUTTONS */
+  .btn { padding: 5px 12px; border-radius: 5px; font-size: 11px; font-weight: 600; cursor: pointer; border: none; transition: opacity 0.15s; }
+  .btn:hover { opacity: 0.82; }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-accent  { background: var(--accent);  color: #fff; }
+  .btn-ghost   { background: #e8edf5; color: var(--text); }
+  .btn-danger  { background: var(--danger);  color: #fff; }
+  .btn-success { background: var(--success); color: #fff; }
+
+  /* STATUS SELECT */
+  .status-select {
+    padding: 3px 6px; border-radius: 6px; font-size: 11px; font-weight: 600;
+    border: 1px solid var(--border); cursor: pointer; background: #fff;
+  }
+
+  /* MODAL */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .modal-overlay.hidden { display: none; }
+  .modal { background: #fff; border-radius: 12px; width: 100%; max-width: 480px; box-shadow: 0 8px 40px rgba(0,0,0,0.25); }
+  .modal-header { padding: 16px 20px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .modal-header h3 { font-size: 15px; font-weight: 700; color: var(--primary); }
+  .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--muted); }
+  .modal-close:hover { color: var(--danger); }
+  .modal-body { padding: 18px 20px; }
+  .modal-footer { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
+
+  /* TOAST */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+    background: #1a3a5c; color: #fff; padding: 10px 18px; border-radius: 8px;
+    font-size: 13px; font-weight: 600; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    transform: translateY(80px); opacity: 0; transition: all 0.3s;
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+  #toast.error { background: var(--danger); }
+
+  /* SPINNER */
+  .spinner { width: 36px; height: 36px; border: 4px solid rgba(26,58,92,0.15); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.7s linear infinite; margin: 40px auto; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 900px) {
+    .stats-row { grid-template-columns: 1fr 1fr; }
+    .page { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">🏠 Renew Home Exteriors</div>
+  </div>
+  <span class="badge">Quote History</span>
+  <div class="ml">
+    <span class="user" id="userNameDisplay"></span>
+    <a id="adminBtn" href="admin.html" style="display:none">⚙️ Admin</a>
+    <button class="link" onclick="handleLogout()">Sign Out</button>
+  </div>
+</header>
+
+<nav class="page-nav">
+  <a href="PricingEstimator.html">📋 Estimator</a>
+  <a href="quotes.html" class="active">📚 Quote History</a>
+  <a href="change-orders.html">🔄 Change Orders</a>
+  <a href="reports.html">📊 Reports</a>
+</nav>
+
+
+<div class="page">
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">Total Quotes</div>
+      <div class="stat-value" id="statTotal">—</div>
+      <div class="stat-sub">all time</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">This Month</div>
+      <div class="stat-value" id="statMonth">—</div>
+      <div class="stat-sub" id="statMonthLabel">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Pipeline Value</div>
+      <div class="stat-value" id="statValue">—</div>
+      <div class="stat-sub">draft + sent quotes</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Signed / Contracted</div>
+      <div class="stat-value" id="statSigned">—</div>
+      <div class="stat-sub" id="statSignedValue">—</div>
+    </div>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div class="filter-bar">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="Search customer, address, quote #…" oninput="applyFilters()">
+    </div>
+    <select id="statusFilter" onchange="applyFilters()">
+      <option value="">All Status</option>
+      <option value="draft">Draft</option>
+      <option value="sent">Sent</option>
+      <option value="signed">Signed</option>
+      <option value="void">Void</option>
+    </select>
+    <select id="typeFilter" onchange="applyFilters()">
+      <option value="">All Types</option>
+      <option value="roof">Roofing</option>
+      <option value="siding">Siding</option>
+      <option value="windows">Windows</option>
+      <option value="doors">Doors</option>
+      <option value="gutters">Gutters</option>
+    </select>
+    <select id="dateFilter" onchange="applyFilters()">
+      <option value="all">All Time</option>
+      <option value="week">This Week</option>
+      <option value="month" selected>This Month</option>
+      <option value="quarter">This Quarter</option>
+      <option value="year">This Year</option>
+    </select>
+    <div id="repFilterWrap" style="display:none">
+      <select id="repFilter" onchange="applyFilters()">
+        <option value="">All Reps</option>
+        <option value="unassigned">Unassigned</option>
+      </select>
+    </div>
+    <div class="ml">
+      <button class="btn btn-ghost" onclick="loadQuotes()">↺ Refresh</button>
+      <a href="PricingEstimator.html" class="btn btn-accent" style="text-decoration:none;padding:5px 14px">+ New Quote</a>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="tbl-card">
+    <table>
+      <thead>
+        <tr>
+          <th onclick="sortBy('quote_number')" id="th-quote_number">Quote # <span class="sort-arrow">↕</span></th>
+          <th onclick="sortBy('customer_name')" id="th-customer_name">Customer <span class="sort-arrow">↕</span></th>
+          <th>Address</th>
+          <th onclick="sortBy('template_id')" id="th-template_id">Type <span class="sort-arrow">↕</span></th>
+          <th onclick="sortBy('grand')" id="th-grand">Total <span class="sort-arrow">↕</span></th>
+          <th onclick="sortBy('status')" id="th-status">Status <span class="sort-arrow">↕</span></th>
+          <th onclick="sortBy('updated_at')" id="th-updated_at" class="sorted">Updated <span class="sort-arrow">↓</span></th>
+          <th id="th-rep" style="width:130px">Rep</th>
+          <th style="width:200px">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="quotesBody">
+        <tr><td colspan="8"><div class="spinner"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div><!-- /page -->
+
+<!-- DELETE CONFIRM MODAL -->
+<div class="modal-overlay hidden" id="deleteModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Delete Quote</h3>
+      <button class="modal-close" onclick="closeModal('deleteModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;line-height:1.6">Are you sure you want to delete quote <strong id="deleteQuoteNum"></strong> for <strong id="deleteCustomer"></strong>? This cannot be undone.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('deleteModal')">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─── SUPABASE ─────────────────────────────────────────────────
+const SUPABASE_URL      = 'https://chnkkcdstxtfnoqelwgz.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_cQ1hnPv5r5N6gmJq8CLmMw_rP_RNiSA';
+const _supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentSession  = null;
+let currentRole     = null;   // 'platform_owner' | 'super_admin' | 'admin' | 'director' | 'user'
+let allQuotes       = [];
+let filteredQuotes  = [];
+let allReps         = [];     // users list for assignment dropdown
+let sortCol         = 'updated_at';
+let sortDir         = 'desc';
+let pendingDeleteId = null;
+
+// ─── TYPE MAP ─────────────────────────────────────────────────
+const TEMPLATE_TYPE_MAP = {
+  'gaf-hdz': 'roof', 'iko-cambridge': 'roof', 'metal': 'roof',
+  'ody-housewrap': 'siding', 'ody-polar': 'siding', 'charter-oak': 'siding'
+};
+const TYPE_LABEL = { roof:'Roofing', siding:'Siding', windows:'Windows', doors:'Doors', gutters:'Gutters' };
+
+// ─── INIT ─────────────────────────────────────────────────────
+(async function init() {
+  _supa.auth.onAuthStateChange((_, session) => updateAuthUI(session));
+  const { data: { session } } = await _supa.auth.getSession();
+  if (!session) { window.location.href = 'PricingEstimator.html'; return; }
+  updateAuthUI(session);
+  await loadQuotes();
+})();
+
+async function updateAuthUI(session) {
+  if (!session) { window.location.href = 'PricingEstimator.html'; return; }
+  currentSession = session;
+  document.getElementById('userNameDisplay').textContent =
+    session.user.user_metadata?.full_name || session.user.email;
+  // Load role + reps list
+  const ud = await fetch(
+    SUPABASE_URL + '/rest/v1/users?select=role&id=eq.' + session.user.id + '&limit=1',
+    { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + session.access_token } }
+  ).then(r => r.json()).catch(() => []);
+  currentRole = ud?.[0]?.role || 'user';
+  const ADMIN_ROLES   = ['admin','super_admin','platform_owner'];
+  const ELEVATED_ROLES = [...ADMIN_ROLES, 'director'];
+  if (ADMIN_ROLES.includes(currentRole)) {
+    document.getElementById('adminBtn').style.display = 'inline-block';
+  }
+  if (ELEVATED_ROLES.includes(currentRole)) {
+    // Load all reps for assignment dropdown and rep filter
+    const rd = await fetch(
+      SUPABASE_URL + '/rest/v1/users?select=id,name,email,role&active=eq.true&order=name.asc',
+      { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + session.access_token } }
+    ).then(r => r.json()).catch(() => []);
+    allReps = Array.isArray(rd) ? rd : [];
+    document.getElementById('repFilterWrap').style.display = 'flex';
+    populateRepFilter();
+  }
+}
+
+async function handleLogout() {
+  await _supa.auth.signOut();
+  window.location.href = 'PricingEstimator.html';
+}
+
+// ─── LOAD QUOTES ──────────────────────────────────────────────
+async function loadQuotes() {
+  document.getElementById('quotesBody').innerHTML =
+    '<tr><td colspan="8"><div class="spinner"></div></td></tr>';
+
+  const res = await fetch(
+    SUPABASE_URL + '/rest/v1/quotes?select=id,quote_number,customer_name,customer_address,template_id,totals,status,created_at,updated_at,payment_data,items,assigned_rep_id,created_by&order=updated_at.desc&limit=500',
+    { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + currentSession.access_token } }
+  );
+  const data = await res.json();
+  allQuotes = Array.isArray(data) ? data : [];
+
+  // Set default date filter to this month
+  const now = new Date();
+  document.getElementById('statMonthLabel').textContent =
+    now.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+  buildStats();
+  applyFilters();
+}
+
+// ─── STATS ────────────────────────────────────────────────────
+function buildStats() {
+  const now   = new Date();
+  const month = now.getMonth();
+  const year  = now.getFullYear();
+
+  const thisMonth = allQuotes.filter(q => {
+    const d = new Date(q.created_at);
+    return d.getMonth() === month && d.getFullYear() === year;
+  });
+
+  const pipeline = allQuotes.filter(q => q.status === 'draft' || q.status === 'sent');
+  const pipelineVal = pipeline.reduce((s, q) => s + (q.totals?.grand || 0), 0);
+
+  const signed    = allQuotes.filter(q => q.status === 'signed');
+  const signedVal = signed.reduce((s, q) => s + (q.totals?.grand || 0), 0);
+
+  document.getElementById('statTotal').textContent   = allQuotes.length;
+  document.getElementById('statMonth').textContent   = thisMonth.length;
+  document.getElementById('statValue').textContent   = '$' + pipelineVal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  document.getElementById('statSigned').textContent  = signed.length;
+  document.getElementById('statSignedValue').textContent = '$' + signedVal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' contracted';
+}
+
+// ─── REP FILTER ───────────────────────────────────────────────
+function populateRepFilter() {
+  const sel = document.getElementById('repFilter');
+  // Keep first two options (All Reps, Unassigned)
+  while (sel.options.length > 2) sel.remove(2);
+  allReps.forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r.id;
+    opt.textContent = r.name || r.email;
+    sel.appendChild(opt);
+  });
+}
+
+function repName(repId) {
+  if (!repId) return '—';
+  const r = allReps.find(x => x.id === repId);
+  return r ? (r.name || r.email) : repId.slice(0,8);
+}
+
+// ─── FILTERS ──────────────────────────────────────────────────
+function applyFilters() {
+  const q        = document.getElementById('searchInput').value.toLowerCase();
+  const status   = document.getElementById('statusFilter').value;
+  const typeF    = document.getElementById('typeFilter').value;
+  const dateF    = document.getElementById('dateFilter').value;
+  const repF     = ['admin','super_admin','platform_owner','director'].includes(currentRole) ? document.getElementById('repFilter').value : '';
+  const now      = new Date();
+
+  filteredQuotes = allQuotes.filter(quote => {
+    // Search
+    if (q) {
+      const haystack = [
+        quote.customer_name, quote.customer_address,
+        quote.quote_number, quote.template_id
+      ].join(' ').toLowerCase();
+      if (!haystack.includes(q)) return false;
+    }
+    // Status
+    if (status && quote.status !== status) return false;
+    // Type
+    if (typeF) {
+      const tType = TEMPLATE_TYPE_MAP[quote.template_id] || (quote.template_id?.includes('siding') ? 'siding' : '');
+      if (tType !== typeF) return false;
+    }
+    // Date
+    if (dateF !== 'all') {
+      const d = new Date(quote.created_at);
+      const diffDays = (now - d) / 86400000;
+      if (dateF === 'week'    && diffDays > 7)   return false;
+      if (dateF === 'month'   && (d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear())) return false;
+      if (dateF === 'quarter' && diffDays > 91)  return false;
+      if (dateF === 'year'    && d.getFullYear() !== now.getFullYear()) return false;
+    }
+    // Rep filter (admin only)
+    const effRep = quote.assigned_rep_id || quote.created_by;
+    if (repF === 'unassigned') { if (effRep) return false; }
+    else if (repF) { if (effRep !== repF) return false; }
+
+    return true;
+  });
+
+  sortQuotes();
+}
+
+// ─── SORT ─────────────────────────────────────────────────────
+function sortBy(col) {
+  if (sortCol === col) {
+    sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortCol = col;
+    sortDir = col === 'updated_at' || col === 'grand' ? 'desc' : 'asc';
+  }
+  // Update header arrows
+  document.querySelectorAll('th').forEach(th => th.classList.remove('sorted'));
+  const thEl = document.getElementById('th-' + col);
+  if (thEl) {
+    thEl.classList.add('sorted');
+    thEl.querySelector('.sort-arrow').textContent = sortDir === 'asc' ? '↑' : '↓';
+  }
+  sortQuotes();
+}
+
+function sortQuotes() {
+  const dir = sortDir === 'asc' ? 1 : -1;
+  filteredQuotes.sort((a, b) => {
+    let va, vb;
+    if (sortCol === 'grand') {
+      va = a.totals?.grand || 0;
+      vb = b.totals?.grand || 0;
+    } else {
+      va = a[sortCol] || '';
+      vb = b[sortCol] || '';
+    }
+    if (va < vb) return -dir;
+    if (va > vb) return  dir;
+    return 0;
+  });
+  renderTable();
+}
+
+// ─── RENDER TABLE ─────────────────────────────────────────────
+function renderTable() {
+  const tbody = document.getElementById('quotesBody');
+  if (!filteredQuotes.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="9">📭 No quotes match your filters</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filteredQuotes.map(q => {
+    const grand    = q.totals?.grand || 0;
+    const grandFmt = '$' + grand.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const date     = q.updated_at ? new Date(q.updated_at).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : '—';
+    const tplId    = q.template_id || '';
+    const tType    = TEMPLATE_TYPE_MAP[tplId] || (tplId.includes('siding') ? 'siding' : tplId.includes('roof') || tplId.includes('gaf') || tplId.includes('iko') || tplId.includes('metal') ? 'roof' : '');
+    const typeBadge = tType ? `<span class="type-badge type-${tType}">${TYPE_LABEL[tType] || tType}</span>` : `<span style="font-size:11px;color:var(--muted)">${tplId || '—'}</span>`;
+    const addr = q.customer_address || '—';
+    const qnum = q.quote_number || q.id?.slice(0,8).toUpperCase() || '—';
+
+    // Rep cell — elevated roles get an assignment dropdown, users see name only
+    let repCell;
+    if (['admin','super_admin','platform_owner','director'].includes(currentRole)) {
+      const opts = [
+        `<option value="">— Unassigned —</option>`,
+        ...allReps.map(r => `<option value="${r.id}" ${(q.assigned_rep_id || q.created_by) === r.id ? 'selected' : ''}>${escHtml(r.name || r.email)}</option>`)
+      ].join('');
+      repCell = `<select class="status-select" style="width:110px;font-size:10px" onchange="assignRep('${q.id}',this.value)">${opts}</select>`;
+    } else {
+      repCell = `<span style="font-size:11px;color:var(--muted)">${escHtml(repName(q.assigned_rep_id || q.created_by))}</span>`;
+    }
+
+    return `<tr>
+      <td><strong style="color:var(--primary);font-family:monospace">${qnum}</strong></td>
+      <td>
+        <a class="prop-link" href="property.html?id=${q.id}" title="Open Property Dashboard">${escHtml(q.customer_name || '—')}</a>
+      </td>
+      <td style="color:var(--muted);font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(addr)}">${escHtml(addr)}</td>
+      <td>${typeBadge}</td>
+      <td><strong>${grandFmt}</strong></td>
+      <td>
+        <select class="status-select" onchange="updateStatus('${q.id}', this.value)" style="color:${statusColor(q.status)}">
+          <option value="draft"  ${q.status==='draft'  ?'selected':''}>Draft</option>
+          <option value="sent"   ${q.status==='sent'   ?'selected':''}>Sent</option>
+          <option value="signed" ${q.status==='signed' ?'selected':''}>Signed</option>
+          <option value="void"   ${q.status==='void'   ?'selected':''}>Void</option>
+        </select>
+      </td>
+      <td style="color:var(--muted);font-size:11px">${date}</td>
+      <td>${repCell}</td>
+      <td>
+        <div style="display:flex;gap:4px;flex-wrap:wrap">
+          <a class="btn btn-ghost" href="property.html?id=${q.id}" title="Property Dashboard">🏠</a>
+          <button class="btn btn-primary" onclick="openInEstimator('${q.id}')">📋 Open</button>
+          <button class="btn btn-ghost"   onclick="duplicateQuote('${q.id}')">⧉ Dup</button>
+          <button class="btn btn-danger"  onclick="promptDelete('${q.id}','${qnum}','${escHtml(q.customer_name||'')}')">🗑</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function statusColor(s) {
+  return { draft:'#475569', sent:'#1d4ed8', signed:'#065f46', void:'#991b1b' }[s] || '#475569';
+}
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── ACTIONS ──────────────────────────────────────────────────
+function openInEstimator(id) {
+  window.location.href = 'PricingEstimator.html?load=' + id;
+}
+
+async function duplicateQuote(id) {
+  const original = allQuotes.find(q => q.id === id);
+  if (!original) return;
+
+  // Fetch full quote data
+  const res = await fetch(
+    SUPABASE_URL + '/rest/v1/quotes?id=eq.' + id + '&select=*',
+    { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + currentSession.access_token } }
+  );
+  const data = await res.json();
+  const q = data?.[0];
+  if (!q) { toast('Could not load quote', true); return; }
+
+  // Get new quote number
+  const numRes  = await fetch(SUPABASE_URL + '/rest/v1/rpc/next_quote_number', {
+    method: 'POST', body: '{}',
+    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + currentSession.access_token, 'Content-Type': 'application/json' }
+  });
+  const newNum = await numRes.json();
+
+  const payload = {
+    tenant_id:        '5249f9c0-9fca-46c8-896c-4e35be437024',
+    created_by:       currentSession.user.id,
+    assigned_rep_id:  currentSession.user.id,
+    quote_number:     newNum,
+    customer_name:    (q.customer_name || '') + ' (Copy)',
+    customer_address: q.customer_address,
+    customer_phone:   q.customer_phone,
+    customer_email:   q.customer_email,
+    template_id:      q.template_id,
+    items:            q.items,
+    color_selections: q.color_selections,
+    totals:           q.totals,
+    notes:            q.notes,
+    status:           'draft',
+    dimension_data:   q.dimension_data,
+    payment_data:     q.payment_data
+  };
+
+  const insertRes = await fetch(SUPABASE_URL + '/rest/v1/quotes', {
+    method: 'POST', body: JSON.stringify(payload),
+    headers: {
+      'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + currentSession.access_token,
+      'Content-Type': 'application/json', 'Prefer': 'return=representation'
+    }
+  });
+  if (!insertRes.ok) { toast('Duplicate failed', true); return; }
+  toast('Quote duplicated as ' + newNum + ' ✓');
+  await loadQuotes();
+}
+
+async function assignRep(id, repId) {
+  const body = repId ? { assigned_rep_id: repId } : { assigned_rep_id: null };
+  const res = await fetch(SUPABASE_URL + '/rest/v1/quotes?id=eq.' + id, {
+    method: 'PATCH', body: JSON.stringify(body),
+    headers: {
+      'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + currentSession.access_token,
+      'Content-Type': 'application/json', 'Prefer': 'return=minimal'
+    }
+  });
+  if (!res.ok) { toast('Assignment failed', true); return; }
+  const q = allQuotes.find(x => x.id === id);
+  if (q) q.assigned_rep_id = repId || null;
+  toast(repId ? 'Assigned to ' + repName(repId) + ' ✓' : 'Rep unassigned ✓');
+}
+
+async function updateStatus(id, status) {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/quotes?id=eq.' + id, {
+    method: 'PATCH', body: JSON.stringify({ status }),
+    headers: {
+      'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + currentSession.access_token,
+      'Content-Type': 'application/json', 'Prefer': 'return=minimal'
+    }
+  });
+  if (!res.ok) { toast('Status update failed', true); return; }
+  const q = allQuotes.find(x => x.id === id);
+  if (q) q.status = status;
+  buildStats();
+  toast('Status updated to ' + status + ' ✓');
+}
+
+function promptDelete(id, qnum, customer) {
+  pendingDeleteId = id;
+  document.getElementById('deleteQuoteNum').textContent = qnum;
+  document.getElementById('deleteCustomer').textContent = customer;
+  document.getElementById('deleteModal').classList.remove('hidden');
+}
+
+async function confirmDelete() {
+  if (!pendingDeleteId) return;
+  const res = await fetch(SUPABASE_URL + '/rest/v1/quotes?id=eq.' + pendingDeleteId, {
+    method: 'DELETE',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + currentSession.access_token,
+      'Prefer': 'return=minimal'
+    }
+  });
+  closeModal('deleteModal');
+  if (!res.ok) { toast('Delete failed', true); return; }
+  toast('Quote deleted');
+  allQuotes = allQuotes.filter(q => q.id !== pendingDeleteId);
+  pendingDeleteId = null;
+  buildStats();
+  applyFilters();
+}
+
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+// ─── TOAST ────────────────────────────────────────────────────
+function toast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show' + (isError ? ' error' : '');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => { t.className = ''; }, 3200);
+}
+</script>
+</body>
+</html>

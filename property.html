@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Property Dashboard — Renew Home Exteriors</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+  :root {
+    --primary: #1a3a5c; --accent: #e8500a; --light: #f4f7fb;
+    --border: #d0d9e8; --success: #2a7a3b; --danger: #c0392b;
+    --text: #1e2a38; --muted: #6b7a90; --card: #ffffff;
+    --shadow: 0 2px 12px rgba(26,58,92,0.10);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--light); color: var(--text); font-size: 14px; }
+
+  /* HEADER */
+  header {
+    background: var(--primary); color: #fff;
+    padding: 0 28px; display: flex; align-items: center; gap: 14px; height: 54px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18); position: sticky; top: 0; z-index: 200;
+  }
+  header .logo { font-size: 16px; font-weight: 700; }
+  header .ml { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  header a, header button.link {
+    background: none; border: none; color: rgba(255,255,255,0.75);
+    font-size: 12px; cursor: pointer; text-decoration: none;
+    padding: 4px 11px; border-radius: 14px; transition: background 0.15s;
+  }
+  header a:hover, header button.link:hover { background: rgba(255,255,255,0.15); color: #fff; }
+  header .user { font-size: 12px; opacity: 0.8; }
+
+  nav.page-nav {
+    background: #132d4a; display: flex; gap: 0; padding: 0 28px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  nav.page-nav a {
+    color: rgba(255,255,255,0.65); text-decoration: none; font-size: 12px; font-weight: 600;
+    padding: 9px 18px; display: block; border-bottom: 2px solid transparent; transition: all 0.15s;
+  }
+  nav.page-nav a.active { color: #fff; border-bottom-color: var(--accent); }
+  nav.page-nav a:hover:not(.active) { color: #fff; }
+
+  /* HERO */
+  .hero {
+    position: relative; height: 340px; background: #1a2a3a; overflow: hidden;
+  }
+  .hero-img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+    filter: brightness(0.72);
+  }
+  .hero-placeholder {
+    width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #1a3a5c 0%, #2c5282 100%);
+    font-size: 64px;
+  }
+  .hero-overlay {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 28px 32px 22px;
+    background: linear-gradient(to top, rgba(10,20,35,0.92) 0%, transparent 100%);
+  }
+  .hero-address {
+    font-size: 26px; font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 6px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  }
+  .hero-customer {
+    font-size: 14px; color: rgba(255,255,255,0.78); margin-bottom: 10px;
+  }
+  .hero-actions {
+    display: flex; gap: 8px; flex-wrap: wrap;
+  }
+  .hero-btn {
+    padding: 7px 16px; border-radius: 6px; font-size: 12px; font-weight: 700;
+    border: none; cursor: pointer; transition: opacity 0.15s; text-decoration: none;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .hero-btn:hover { opacity: 0.86; }
+  .hero-btn-accent  { background: var(--accent); color: #fff; }
+  .hero-btn-white   { background: rgba(255,255,255,0.18); color: #fff; border: 1px solid rgba(255,255,255,0.3); backdrop-filter: blur(4px); }
+  .hero-btn-white:hover { background: rgba(255,255,255,0.28); }
+
+  /* GOOGLE MAPS BUTTON */
+  .maps-btn {
+    position: absolute; top: 14px; right: 16px;
+    background: rgba(255,255,255,0.92); border: none; border-radius: 6px;
+    padding: 6px 12px; font-size: 11px; font-weight: 700; color: var(--primary);
+    cursor: pointer; display: flex; align-items: center; gap: 5px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2); text-decoration: none; transition: background 0.15s;
+  }
+  .maps-btn:hover { background: #fff; }
+
+  /* BODY LAYOUT */
+  .body-wrap {
+    display: grid; grid-template-columns: 280px 1fr; gap: 20px;
+    padding: 24px 28px; max-width: 1400px; margin: 0 auto;
+  }
+  @media (max-width: 860px) {
+    .body-wrap { grid-template-columns: 1fr; padding: 16px; }
+    .hero { height: 240px; }
+    .hero-address { font-size: 18px; }
+  }
+
+  /* SIDEBAR */
+  .sidebar { display: flex; flex-direction: column; gap: 16px; }
+
+  /* INFO CARD */
+  .card {
+    background: var(--card); border-radius: 10px; border: 1px solid var(--border);
+    box-shadow: var(--shadow); overflow: hidden;
+  }
+  .card-header {
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+    color: var(--muted); display: flex; align-items: center; justify-content: space-between;
+  }
+  .card-body { padding: 14px 16px; }
+
+  .info-row { display: flex; flex-direction: column; gap: 1px; margin-bottom: 12px; }
+  .info-row:last-child { margin-bottom: 0; }
+  .info-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--muted); letter-spacing: 0.4px; }
+  .info-val   { font-size: 13px; color: var(--text); font-weight: 500; }
+  .info-val a { color: var(--accent); text-decoration: none; }
+  .info-val a:hover { text-decoration: underline; }
+
+  /* STATS ROW */
+  .prop-stats {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+  }
+  .prop-stat {
+    background: var(--light); border-radius: 8px; padding: 10px 12px; text-align: center;
+  }
+  .prop-stat-val   { font-size: 22px; font-weight: 800; color: var(--primary); }
+  .prop-stat-label { font-size: 10px; color: var(--muted); font-weight: 600; text-transform: uppercase; margin-top: 2px; }
+
+  /* MAIN CONTENT */
+  .main-content { display: flex; flex-direction: column; gap: 20px; }
+
+  /* SECTION HEADER */
+  .section-hd {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+  }
+  .section-hd h2 {
+    font-size: 13px; font-weight: 700; color: var(--primary);
+    display: flex; align-items: center; gap: 7px;
+  }
+  .count-pill {
+    background: var(--accent); color: #fff; padding: 2px 7px;
+    border-radius: 10px; font-size: 10px; font-weight: 800;
+  }
+
+  /* QUOTE CARDS */
+  .quote-cards { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .quote-card {
+    border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px;
+    display: flex; align-items: flex-start; gap: 14px;
+    transition: border-color 0.15s, box-shadow 0.15s; cursor: pointer;
+  }
+  .quote-card:hover { border-color: var(--primary); box-shadow: 0 2px 10px rgba(26,58,92,0.12); }
+  .quote-card-left { flex: 1; min-width: 0; }
+  .quote-card-right { text-align: right; flex-shrink: 0; }
+  .qc-num  { font-size: 11px; font-weight: 700; color: var(--muted); font-family: monospace; margin-bottom: 3px; }
+  .qc-name { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .qc-meta { font-size: 11px; color: var(--muted); }
+  .qc-total { font-size: 18px; font-weight: 800; color: var(--primary); margin-bottom: 4px; }
+  .qc-date  { font-size: 11px; color: var(--muted); }
+  .qc-actions { display: flex; gap: 5px; margin-top: 10px; flex-wrap: wrap; }
+
+  /* BADGES */
+  .badge { padding: 3px 9px; border-radius: 10px; font-size: 10px; font-weight: 700; text-transform: capitalize; white-space: nowrap; }
+  .badge-draft   { background: #e2e8f0; color: #475569; }
+  .badge-sent    { background: #dbeafe; color: #1d4ed8; }
+  .badge-signed  { background: #d1fae5; color: #065f46; }
+  .badge-void    { background: #fee2e2; color: #991b1b; }
+
+  .type-badge { padding: 2px 7px; border-radius: 8px; font-size: 10px; font-weight: 600; }
+  .type-roof    { background: #fef3c7; color: #92400e; }
+  .type-siding  { background: #d1fae5; color: #065f46; }
+  .type-windows { background: #e0f2fe; color: #075985; }
+  .type-doors   { background: #fce7f3; color: #9d174d; }
+  .type-gutters { background: #f3f4f6; color: #374151; }
+
+  /* BUTTONS */
+  .btn { padding: 5px 11px; border-radius: 5px; font-size: 11px; font-weight: 600; cursor: pointer; border: none; transition: opacity 0.15s; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+  .btn:hover { opacity: 0.82; }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-accent  { background: var(--accent);  color: #fff; }
+  .btn-ghost   { background: #e8edf5; color: var(--text); }
+  .btn-danger  { background: var(--danger);  color: #fff; }
+  .btn-success { background: var(--success); color: #fff; }
+
+  /* CO TABLE */
+  .co-table-wrap { padding: 0; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th {
+    background: var(--light); padding: 9px 12px; text-align: left;
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    color: var(--muted); border-bottom: 2px solid var(--border); white-space: nowrap;
+  }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f8fafd; }
+  .empty-msg { text-align: center; padding: 32px; color: var(--muted); font-size: 13px; }
+
+  /* SIGNING STATUS */
+  .sign-badge { padding: 2px 8px; border-radius: 8px; font-size: 10px; font-weight: 700; }
+  .sign-pending  { background: #fef3c7; color: #92400e; }
+  .sign-signed   { background: #d1fae5; color: #065f46; }
+
+  /* SPINNER */
+  .spinner { width: 32px; height: 32px; border: 3px solid rgba(26,58,92,0.15); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.7s linear infinite; margin: 30px auto; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* TOAST */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+    background: #1a3a5c; color: #fff; padding: 10px 18px; border-radius: 8px;
+    font-size: 13px; font-weight: 600; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    transform: translateY(80px); opacity: 0; transition: all 0.3s;
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+  #toast.error { background: var(--danger); }
+
+  /* DELETE MODAL */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .modal-overlay.hidden { display: none; }
+  .modal { background: #fff; border-radius: 12px; width: 100%; max-width: 420px; box-shadow: 0 8px 40px rgba(0,0,0,0.25); }
+  .modal-header { padding: 16px 20px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .modal-header h3 { font-size: 15px; font-weight: 700; color: var(--primary); }
+  .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--muted); }
+  .modal-body { padding: 18px 20px; }
+  .modal-footer { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
+
+  /* STATUS SELECT inline */
+  .status-select {
+    padding: 3px 6px; border-radius: 6px; font-size: 11px; font-weight: 600;
+    border: 1px solid var(--border); cursor: pointer; background: #fff;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🏠 Renew Home Exteriors</div>
+  <div class="ml">
+    <span class="user" id="userNameDisplay"></span>
+    <a id="adminBtn" href="admin.html" style="display:none">⚙️ Admin</a>
+    <button class="link" onclick="handleLogout()">Sign Out</button>
+  </div>
+</header>
+
+<nav class="page-nav">
+  <a href="PricingEstimator.html">📋 Estimator</a>
+  <a href="quotes.html">📚 Quote History</a>
+  <a href="change-orders.html">🔄 Change Orders</a>
+</nav>
+
+<!-- HERO: property photo + address overlay -->
+<div class="hero" id="heroSection">
+  <div class="hero-placeholder" id="heroPlaceholder">🏠</div>
+  <img id="heroImg" class="hero-img" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="Property photo">
+  <a id="mapsBtn" class="maps-btn" href="#" target="_blank" rel="noopener" style="display:none">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+    Open in Maps
+  </a>
+  <div class="hero-overlay">
+    <div class="hero-address" id="heroAddress">Loading…</div>
+    <div class="hero-customer" id="heroCustomer"></div>
+    <div class="hero-actions">
+      <button class="hero-btn hero-btn-accent" onclick="newQuote()">＋ New Quote</button>
+      <button class="hero-btn hero-btn-white" onclick="newCO()">＋ Change Order</button>
+      <a  href="quotes.html" class="hero-btn hero-btn-white">← Back to All Quotes</a>
+    </div>
+  </div>
+</div>
+
+<!-- BODY -->
+<div class="body-wrap">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+
+    <!-- Property Stats -->
+    <div class="card">
+      <div class="card-header">Property Overview</div>
+      <div class="card-body">
+        <div class="prop-stats">
+          <div class="prop-stat">
+            <div class="prop-stat-val" id="statQtCount">—</div>
+            <div class="prop-stat-label">Quotes</div>
+          </div>
+          <div class="prop-stat">
+            <div class="prop-stat-val" id="statCoCount">—</div>
+            <div class="prop-stat-label">Change Orders</div>
+          </div>
+          <div class="prop-stat">
+            <div class="prop-stat-val" id="statSigned">—</div>
+            <div class="prop-stat-label">Signed</div>
+          </div>
+        </div>
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+          <div class="info-label" style="margin-bottom:4px">Total Value (Signed)</div>
+          <div style="font-size:22px;font-weight:800;color:var(--success)" id="statValue">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contact Info -->
+    <div class="card">
+      <div class="card-header">Customer Info</div>
+      <div class="card-body">
+        <div class="info-row">
+          <div class="info-label">Name</div>
+          <div class="info-val" id="infoName">—</div>
+        </div>
+        <div class="info-row">
+          <div class="info-label">Address</div>
+          <div class="info-val" id="infoAddr">—</div>
+        </div>
+        <div class="info-row">
+          <div class="info-label">Phone</div>
+          <div class="info-val" id="infoPhone">—</div>
+        </div>
+        <div class="info-row">
+          <div class="info-label">Email</div>
+          <div class="info-val" id="infoEmail">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Satellite Image Credit -->
+    <div class="card" id="satCreditCard" style="display:none">
+      <div class="card-body" style="font-size:10px;color:var(--muted);text-align:center;padding:10px 16px">
+        Satellite imagery © Google Maps
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card">
+      <div class="card-header">Quick Actions</div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn btn-accent" style="justify-content:center;padding:9px" onclick="newQuote()">＋ New Quote for this Property</button>
+        <button class="btn btn-ghost"  style="justify-content:center;padding:9px" onclick="newCO()">＋ New Change Order</button>
+        <button class="btn btn-ghost"  style="justify-content:center;padding:9px" onclick="openCancellationForm()">🚫 Cancellation Agreement</button>
+        <a href="quotes.html" class="btn btn-ghost" style="justify-content:center;padding:9px">📚 All Quote History</a>
+      </div>
+    </div>
+
+  </div><!-- /sidebar -->
+
+  <!-- MAIN -->
+  <div class="main-content">
+
+    <!-- QUOTES SECTION -->
+    <div class="card">
+      <div class="section-hd">
+        <h2>📋 Quotes <span class="count-pill" id="qtCountPill">0</span></h2>
+        <button class="btn btn-accent" onclick="newQuote()">＋ New Quote</button>
+      </div>
+      <div class="quote-cards" id="quoteCards">
+        <div class="spinner"></div>
+      </div>
+    </div>
+
+    <!-- CHANGE ORDERS SECTION -->
+    <div class="card">
+      <div class="section-hd">
+        <h2>🔄 Change Orders <span class="count-pill" id="coCountPill">0</span></h2>
+        <button class="btn btn-ghost" onclick="newCO()">＋ New CO</button>
+      </div>
+      <div class="co-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>CO #</th>
+              <th>Quote</th>
+              <th>Description</th>
+              <th>Δ Amount</th>
+              <th>Status</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="coBody">
+            <tr><td colspan="7"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CANCELLATION AGREEMENTS SECTION -->
+    <div class="card">
+      <div class="section-hd">
+        <h2>🚫 Cancellation Agreements <span class="count-pill" id="caCountPill">0</span></h2>
+        <button class="btn btn-ghost" onclick="openCancellationForm()">＋ New</button>
+      </div>
+      <div id="caList" style="padding:4px 0"></div>
+    </div>
+
+    <!-- PHOTOS SECTION -->
+    <div class="card">
+      <div class="section-hd">
+        <h2>📷 Property Photos <span class="count-pill" id="photoCountPill">0</span></h2>
+        <label id="propPhotoLabel" style="cursor:pointer;display:inline-flex;align-items:center;gap:5px" class="btn btn-ghost">
+          <span>📷 Take / Add Photos</span>
+          <!-- visually hidden (not display:none) so iOS camera sheet + multiple work -->
+          <input type="file" id="propPhotoInput" accept="image/*" multiple
+            style="position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none"
+            onchange="handlePropPhotoUpload(this.files)">
+        </label>
+      </div>
+
+      <!-- Upload drop zone (shown when no photos) -->
+      <div id="propPhotoEmpty" style="padding:32px;text-align:center;color:var(--muted)">
+        <div style="font-size:40px;margin-bottom:10px">📷</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:6px">No photos yet</div>
+        <div style="font-size:11px;margin-bottom:14px">Job site and property photos appear here and are included in the contract</div>
+        <label style="cursor:pointer" class="btn btn-accent">
+          📷 Take / Add Photos
+          <input type="file" accept="image/*" multiple
+            style="position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none"
+            onchange="handlePropPhotoUpload(this.files)">
+        </label>
+        <div style="font-size:10px;color:var(--muted);margin-top:8px">Tap to take a photo or choose from library · select multiple</div>
+      </div>
+
+      <!-- Photo grid -->
+      <div id="propPhotoGrid" style="display:none;padding:16px;display:none">
+        <div id="propPhotoInner" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px"></div>
+        <div id="propPhotoStatus" style="font-size:11px;color:var(--muted);margin-top:10px;text-align:center;display:none"></div>
+      </div>
+    </div>
+
+  </div><!-- /main-content -->
+
+</div><!-- /body-wrap -->
+
+<!-- DELETE MODAL -->
+<div class="modal-overlay hidden" id="deleteModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Delete Quote</h3>
+      <button class="modal-close" onclick="document.getElementById('deleteModal').classList.add('hidden')">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;line-height:1.6">Delete quote <strong id="delQnum"></strong> for <strong id="delCust"></strong>? This cannot be undone.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="document.getElementById('deleteModal').classList.add('hidden')">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─── CONFIG ──────────────────────────────────────────────────────────
+const SB_URL  = 'https://chnkkcdstxtfnoqelwgz.supabase.co';
+const SB_ANON = 'sb_publishable_cQ1hnPv5r5N6gmJq8CLmMw_rP_RNiSA';
+const _supa   = window.supabase.createClient(SB_URL, SB_ANON);
+
+const TEMPLATE_TYPE_MAP = {
+  'gaf-hdz':'roof','iko-cambridge':'roof','metal':'roof',
+  'ody-housewrap':'siding','ody-polar':'siding','charter-oak':'siding'
+};
+const TYPE_LABEL = { roof:'Roofing', siding:'Siding', windows:'Windows', doors:'Doors', gutters:'Gutters' };
+
+const SB_PHOTO_BUCKET = 'property-photos';
+const PROP_TENANT_ID  = '5249f9c0-9fca-46c8-896c-4e35be437024';
+
+let session      = null;
+let anchorQuote  = null;   // the quote whose ID came from URL
+let allQuotes    = [];     // all quotes for this property address
+let allCOs       = [];     // all COs for those quote IDs
+let allPhotos    = [];     // all photos across all quotes for this property
+let pendingDeleteId = null;
+
+// ─── INIT ─────────────────────────────────────────────────────────────
+(async function init() {
+  const { data: { session: s } } = await _supa.auth.getSession();
+  if (!s) { window.location.href = 'PricingEstimator.html'; return; }
+  session = s;
+  document.getElementById('userNameDisplay').textContent =
+    s.user.user_metadata?.full_name || s.user.email;
+
+  // Show admin button?
+  fetch(SB_URL + '/rest/v1/users?select=role&id=eq.' + s.user.id + '&limit=1',
+    { headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + s.access_token } }
+  ).then(r => r.json()).then(d => {
+    if (['admin','super_admin','platform_owner','director'].includes(d?.[0]?.role)) document.getElementById('adminBtn').style.display = 'inline-block';
+  }).catch(() => {});
+
+  // Get anchor quote ID from URL
+  const params = new URLSearchParams(window.location.search);
+  const anchorId = params.get('id');
+  if (!anchorId) { document.getElementById('heroAddress').textContent = 'No property specified'; return; }
+
+  await loadProperty(anchorId);
+})();
+
+async function handleLogout() {
+  await _supa.auth.signOut();
+  window.location.href = 'PricingEstimator.html';
+}
+
+// ─── LOAD PROPERTY ────────────────────────────────────────────────────
+async function loadProperty(anchorId) {
+  // 1. Fetch the anchor quote to get address + customer info
+  const r0 = await fetch(
+    SB_URL + '/rest/v1/quotes?id=eq.' + anchorId + '&select=*&limit=1',
+    { headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + session.access_token } }
+  );
+  const rows0 = await r0.json();
+  if (!rows0.length) {
+    document.getElementById('heroAddress').textContent = 'Quote not found';
+    return;
+  }
+  anchorQuote = rows0[0];
+  const addr  = anchorQuote.customer_address || '';
+  const name  = anchorQuote.customer_name   || '';
+
+  // 2. Render hero immediately
+  renderHero(anchorQuote);
+  renderCustomerInfo(anchorQuote);
+
+  // 3. Fetch all quotes at this address (or by customer name if no address)
+  let quoteUrl = SB_URL + '/rest/v1/quotes?select=id,quote_number,customer_name,customer_address,customer_phone,customer_email,template_id,totals,status,created_at,updated_at,signing_status,signing_session_id,hero_photo_url,payment_data&order=created_at.desc&limit=200';
+  if (addr) {
+    quoteUrl += '&customer_address=eq.' + encodeURIComponent(addr);
+  } else {
+    quoteUrl += '&customer_name=eq.' + encodeURIComponent(name);
+  }
+
+  const r1 = await fetch(quoteUrl, {
+    headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + session.access_token }
+  });
+  allQuotes = await r1.json();
+  if (!Array.isArray(allQuotes)) allQuotes = [anchorQuote];
+
+  // Load this property's saved cancellation agreements.
+  loadCancellations(addr || anchorQuote.customer_address);
+
+  // 4. Fetch change orders for all those quote IDs
+  const qIds = allQuotes.map(q => q.id);
+  let coData  = [];
+  if (qIds.length) {
+    // Supabase: quote_id=in.(id1,id2,...)
+    const inList = '(' + qIds.join(',') + ')';
+    const r2 = await fetch(
+      SB_URL + '/rest/v1/change_orders?quote_id=in.' + inList + '&select=id,co_number,quote_id,findings,reason,total,original_amount,status,signing_session_id,created_at,updated_at&order=created_at.desc&limit=200',
+      { headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + session.access_token } }
+    );
+    coData = await r2.json();
+    if (!Array.isArray(coData)) coData = [];
+  }
+  allCOs = coData;
+
+  // 4b. Fetch signing session tokens for any CO that has a session
+  const coSessionIds = allCOs
+    .filter(co => co.signing_session_id)
+    .map(co => co.signing_session_id);
+  if (coSessionIds.length) {
+    const coSessInList = '(' + coSessionIds.join(',') + ')';
+    const rCoSess = await fetch(
+      SB_URL + '/rest/v1/signing_sessions?id=in.' + coSessInList + '&select=id,token,signed_at',
+      { headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + session.access_token } }
+    );
+    if (rCoSess.ok) {
+      const coSessions = await rCoSess.json();
+      const coSessMap = {};
+      coSessions.forEach(s => { coSessMap[s.id] = s; });
+      allCOs.forEach(co => {
+        if (co.signing_session_id && coSessMap[co.signing_session_id]) {
+          co._signingSession = coSessMap[co.signing_session_id];
+        }
+      });
+    }
+  }
+
+  // 5b. Fetch signing session tokens for any quote that has a session
+  const signedSessionIds = allQuotes
+    .filter(q => q.signing_session_id)
+    .map(q => q.signing_session_id);
+  if (signedSessionIds.length) {
+    const sessionInList = '(' + signedSessionIds.join(',') + ')';
+    const rSess = await fetch(
+      SB_URL + '/rest/v1/signing_sessions?id=in.' + sessionInList + '&select=id,token,signed_at',
+      { headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + session.access_token } }
+    );
+    if (rSess.ok) {
+      const sessions = await rSess.json();
+      const sessMap = {};
+      sessions.forEach(s => { sessMap[s.id] = s; });
+      allQuotes.forEach(q => {
+        if (q.signing_session_id && sessMap[q.signing_session_id]) {
+          q._signingSession = sessMap[q.signing_session_id];
+        }
+      });
+    }
+  }
+
+  // 5. Fetch all photos for all quotes at this property
+  if (qIds.length) {
+    const inList = '(' + qIds.join(',') + ')';
+    const r3 = await fetch(
+      SB_URL + '/rest/v1/quote_photos?quote_id=in.' + inList + '&select=id,quote_id,url,storage_path,filename,caption,sort_order,notes&order=sort_order.asc,created_at.asc',
+      { headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + session.access_token } }
+    );
+    allPhotos = r3.ok ? (await r3.json()) : [];
+  }
+
+  // 6. Use the most recent quote's Property Photo as the hero image
+  const withImg = allQuotes.find(q => q.hero_photo_url);
+  if (withImg && withImg.hero_photo_url) {
+    const heroImg = document.getElementById('heroImg');
+    heroImg.src = withImg.hero_photo_url;
+    heroImg.style.display = 'block';
+    document.getElementById('heroPlaceholder').style.display = 'none';
+  }
+
+  renderStats();
+  renderQuotes();
+  renderCOs();
+  renderPhotos();
+}
+
+// ─── HERO ─────────────────────────────────────────────────────────────
+function renderHero(q) {
+  const addr = q.customer_address || 'Unknown Address';
+  document.title = addr + ' — Renew Home Exteriors';
+  document.getElementById('heroAddress').textContent  = addr;
+  document.getElementById('heroCustomer').textContent = q.customer_name || '';
+
+  // Google Maps button
+  const mapsUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(addr);
+  const mapsBtn = document.getElementById('mapsBtn');
+  mapsBtn.href = mapsUrl;
+  mapsBtn.style.display = 'flex';
+}
+
+// ─── CUSTOMER INFO ────────────────────────────────────────────────────
+function renderCustomerInfo(q) {
+  document.getElementById('infoName').textContent  = q.customer_name    || '—';
+  document.getElementById('infoAddr').textContent  = q.customer_address || '—';
+
+  const phone = q.customer_phone || '';
+  const email = q.customer_email || '';
+  document.getElementById('infoPhone').innerHTML = phone
+    ? `<a href="tel:${h(phone)}">${h(phone)}</a>` : '—';
+  document.getElementById('infoEmail').innerHTML = email
+    ? `<a href="mailto:${h(email)}">${h(email)}</a>` : '—';
+}
+
+// ─── STATS ────────────────────────────────────────────────────────────
+function renderStats() {
+  const signed    = allQuotes.filter(q => q.status === 'signed');
+  const signedVal = signed.reduce((s, q) => s + (q.totals?.grand || 0), 0);
+
+  document.getElementById('statQtCount').textContent = allQuotes.length;
+  document.getElementById('statCoCount').textContent = allCOs.length;
+  document.getElementById('statSigned').textContent  = signed.length;
+  document.getElementById('statValue').textContent   = '$' + signedVal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  document.getElementById('qtCountPill').textContent    = allQuotes.length;
+  document.getElementById('coCountPill').textContent    = allCOs.length;
+  document.getElementById('photoCountPill').textContent = allPhotos.length;
+}
+
+// ─── QUOTE CARDS ─────────────────────────────────────────────────────
+function renderQuotes() {
+  const container = document.getElementById('quoteCards');
+  if (!allQuotes.length) {
+    container.innerHTML = '<div class="empty-msg">📭 No quotes found for this property</div>';
+    return;
+  }
+
+  container.innerHTML = allQuotes.map(q => {
+    const grand   = q.totals?.grand || 0;
+    const grandFmt = '$' + grand.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const date    = q.updated_at ? new Date(q.updated_at).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : '—';
+    const tplId   = q.template_id || '';
+    const tType   = TEMPLATE_TYPE_MAP[tplId] || (tplId.includes('siding') ? 'siding' : tplId.includes('roof') || tplId.includes('gaf') || tplId.includes('iko') || tplId.includes('metal') ? 'roof' : '');
+    const typeBadge = tType
+      ? `<span class="type-badge type-${tType}">${TYPE_LABEL[tType] || tType}</span>`
+      : (tplId ? `<span class="type-badge" style="background:#f1f5f9;color:#64748b">${h(tplId)}</span>` : '');
+    const qnum    = q.quote_number || q.id?.slice(0,8).toUpperCase() || '—';
+    const coCount = allCOs.filter(co => co.quote_id === q.id).length;
+
+    return `
+    <div class="quote-card" onclick="openQuote('${q.id}')">
+      <div class="quote-card-left">
+        <div class="qc-num">${h(qnum)}</div>
+        <div class="qc-name">${h(q.customer_name || '—')}</div>
+        <div class="qc-meta" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          ${typeBadge}
+          <span class="badge badge-${q.status || 'draft'}" style="color:${statusColor(q.status)}">${q.status || 'draft'}</span>
+          ${coCount ? `<span style="font-size:10px;color:var(--muted)">${coCount} CO${coCount !== 1 ? 's' : ''}</span>` : ''}
+        </div>
+        <div class="qc-actions" onclick="event.stopPropagation()">
+          <button class="btn btn-primary" onclick="openQuote('${q.id}')">📋 Open</button>
+          ${q._signingSession?.token
+            ? `<a class="btn btn-ghost" href="https://sign.renewhomeexteriors.com?token=${q._signingSession.token}" target="_blank" style="color:#2e7d32;font-weight:700">📄 View Signed</a>
+               <button class="btn btn-ghost" onclick="window.open('https://sign.renewhomeexteriors.com?token=${q._signingSession.token}','_blank')" style="color:#2e7d32">🖨 Print Signed</button>`
+            : `<button class="btn btn-ghost" onclick="printQuoteFromProperty('${q.id}')">🖨 Print</button>`}
+          <button class="btn btn-ghost"   onclick="openCOForQuote('${q.id}')">🔄 Add CO</button>
+          <select class="status-select" onchange="updateStatus('${q.id}', this.value)" style="color:${statusColor(q.status)}">
+            <option value="draft"  ${q.status==='draft'  ?'selected':''}>Draft</option>
+            <option value="sent"   ${q.status==='sent'   ?'selected':''}>Sent</option>
+            <option value="signed" ${q.status==='signed' ?'selected':''}>Signed</option>
+            <option value="void"   ${q.status==='void'   ?'selected':''}>Void</option>
+          </select>
+          <button class="btn btn-danger" onclick="promptDelete('${q.id}','${h(qnum)}','${h(q.customer_name||'')}')">🗑</button>
+        </div>
+      </div>
+      <div class="quote-card-right">
+        <div class="qc-total">${grandFmt}</div>
+        <div class="qc-date">${date}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─── CHANGE ORDERS TABLE ─────────────────────────────────────────────
+function renderCOs() {
+  const tbody = document.getElementById('coBody');
+  if (!allCOs.length) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-msg">No change orders for this property</td></tr>`;
+    return;
+  }
+
+  // Build a quick lookup: quote_id → quote_number
+  const qMap = {};
+  allQuotes.forEach(q => { qMap[q.id] = q.quote_number || q.id?.slice(0,8).toUpperCase(); });
+
+  tbody.innerHTML = allCOs.map(co => {
+    const date    = co.created_at ? new Date(co.created_at).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : '—';
+    const delta   = (co.total || 0) - (co.original_amount || 0);
+    const deltaFmt = (delta >= 0 ? '+$' : '-$') + Math.abs(delta).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const deltaColor = delta >= 0 ? '#2a7a3b' : '#c0392b';
+    const qnum    = qMap[co.quote_id] || '—';
+
+    return `<tr>
+      <td><strong style="font-family:monospace;color:var(--primary)">${h(co.co_number || '—')}</strong></td>
+      <td><span style="font-family:monospace;font-size:11px;color:var(--muted)">${h(qnum)}</span></td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${h(co.findings||'')}">${h(co.findings || '—')}</td>
+      <td style="font-weight:700;color:${deltaColor}">${deltaFmt}</td>
+      <td><span class="badge badge-${co.status || 'draft'}">${co.status || 'draft'}</span></td>
+      <td style="color:var(--muted);font-size:11px">${date}</td>
+      <td>
+        <a href="change-orders.html?co_id=${co.id}" class="btn btn-ghost">Open ↗</a>
+        ${co._signingSession?.token
+          ? `<a class="btn btn-ghost" href="https://sign.renewhomeexteriors.com?token=${co._signingSession.token}" target="_blank" style="color:#2e7d32;font-weight:700">📄 View Signed</a>
+             <button class="btn btn-ghost" onclick="window.open('https://sign.renewhomeexteriors.com?token=${co._signingSession.token}','_blank')" style="color:#2e7d32">🖨 Print</button>`
+          : ''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── PHOTOS ──────────────────────────────────────────────────────────
+function renderPhotos() {
+  const empty  = document.getElementById('propPhotoEmpty');
+  const grid   = document.getElementById('propPhotoGrid');
+  const inner  = document.getElementById('propPhotoInner');
+  if (!empty || !grid || !inner) return;
+
+  document.getElementById('photoCountPill').textContent = allPhotos.length;
+
+  if (!allPhotos.length) {
+    empty.style.display = 'block';
+    grid.style.display  = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+  grid.style.display  = 'block';
+
+  // Build quote# lookup
+  const qMap = {};
+  allQuotes.forEach(q => { qMap[q.id] = q.quote_number || q.id.slice(0,8).toUpperCase(); });
+
+  inner.innerHTML = allPhotos.map(p => `
+    <div style="border-radius:8px;overflow:hidden;border:1px solid var(--border);background:#f4f7fb;position:relative">
+      <img src="${h(p.url)}" alt="${h(p.filename||'photo')}" loading="lazy"
+        style="width:100%;aspect-ratio:4/3;object-fit:cover;display:block;cursor:pointer"
+        onclick="openPhotoLightbox('${h(p.url)}')">
+      <div style="padding:6px 8px">
+        ${p.caption ? `<div style="font-size:10px;font-weight:600;color:var(--text);margin-bottom:2px">${h(p.caption)}</div>` : ''}
+        ${p.notes ? `<div style="font-size:10px;color:var(--text);line-height:1.4;margin-bottom:3px;white-space:pre-wrap">${h(p.notes)}</div>` : ''}
+        <div style="font-size:9px;color:var(--muted)">Quote ${h(qMap[p.quote_id] || '—')}</div>
+      </div>
+      <button onclick="deletePropPhoto('${p.id}','${h(p.storage_path||'')}')"
+        style="position:absolute;top:5px;right:5px;background:rgba(0,0,0,0.55);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:11px;cursor:pointer;line-height:20px;text-align:center;padding:0">×</button>
+    </div>`).join('');
+}
+
+// ─── QUOTE ACTIONS ───────────────────────────────────────────────────
+function openQuote(id) {
+  window.open('PricingEstimator.html?load=' + id, '_blank');
+}
+function printQuoteFromProperty(id) {
+  window.open('PricingEstimator.html?load=' + id + '&autoprint=1', '_blank');
+}
+function openCOForQuote(id) {
+  const q = allQuotes.find(x => x.id === id);
+  const name = q ? encodeURIComponent(q.customer_name || '') : '';
+  window.open('change-orders.html?quote=' + id + '&name=' + name, '_blank');
+}
+async function promptDelete(id, qnum, name) {
+  if (!confirm(`Delete quote ${qnum} for ${name}? This cannot be undone.`)) return;
+  const { data: sd } = await _supa.auth.getSession();
+  if (!sd?.session) return;
+  const res = await fetch(SB_URL + '/rest/v1/quotes?id=eq.' + id, {
+    method: 'DELETE',
+    headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + sd.session.access_token },
+  });
+  if (res.ok) {
+    allQuotes = allQuotes.filter(q => q.id !== id);
+    renderQuotes(); renderStats();
+  } else {
+    alert('Delete failed.');
+  }
+}
+
+// ─── STATUS HELPERS ───────────────────────────────────────────────────
+function statusColor(s) {
+  return s === 'signed' ? '#2e7d32'
+       : s === 'void'   ? '#c62828'
+       : s === 'sent'   ? '#e65100'
+       : '#9e9e9e'; // draft
+}
+
+async function updateStatus(quoteId, newStatus) {
+  if (newStatus === 'void') {
+    const q = allQuotes.find(x => x.id === quoteId);
+    const label = q ? (q.quote_number || quoteId.slice(0,8).toUpperCase()) : quoteId;
+    if (!confirm(`Mark quote ${label} as VOID? This can only be undone manually.`)) {
+      renderQuotes(); // reset the dropdown
+      return;
+    }
+  }
+  const { data: sd } = await _supa.auth.getSession();
+  if (!sd?.session) return;
+  const res = await fetch(SB_URL + '/rest/v1/quotes?id=eq.' + quoteId, {
+    method: 'PATCH',
+    headers: {
+      'apikey': SB_ANON,
+      'Authorization': 'Bearer ' + sd.session.access_token,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal',
+    },
+    body: JSON.stringify({ status: newStatus }),
+  });
+  if (res.ok) {
+    const q = allQuotes.find(x => x.id === quoteId);
+    if (q) { q.status = newStatus; renderQuotes(); renderStats(); }
+  } else {
+    alert('Status update failed.');
+    renderQuotes();
+  }
+}
+
+function openPhotoLightbox(url) {
+  const lb = document.createElement('div');
+  lb.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:9000;display:flex;align-items:center;justify-content:center;cursor:zoom-out';
+  lb.onclick = () => lb.remove();
+  const img = document.createElement('img');
+  img.src = url;
+  img.style.cssText = 'max-width:90vw;max-height:90vh;border-radius:6px;box-shadow:0 8px 40px rgba(0,0,0,0.6)';
+  lb.appendChild(img);
+  document.body.appendChild(lb);
+}
+
+async function handlePropPhotoUpload(files) {
+  if (!files || !files.length) return;
+  if (!anchorQuote) { toast('Property not loaded yet', true); return; }
+
+  // Upload against the most recent non-void quote, or anchor quote
+  const targetQuote = allQuotes.find(q => q.status !== 'void') || anchorQuote;
+  const statusEl    = document.getElementById('propPhotoStatus');
+  const grid        = document.getElementById('propPhotoGrid');
+  grid.style.display = 'block';
+  document.getElementById('propPhotoEmpty').style.display = 'none';
+  if (statusEl) statusEl.style.display = 'block';
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    if (statusEl) statusEl.textContent = `Uploading ${i + 1} of ${files.length}…`;
+
+    const ext  = (file.name.split('.').pop() || 'jpg').toLowerCase();
+    const path = `${PROP_TENANT_ID}/${targetQuote.id}/${crypto.randomUUID()}.${ext}`;
+
+    const { error: upErr } = await _supa.storage.from(SB_PHOTO_BUCKET).upload(path, file, { upsert: false });
+    if (upErr) { console.error('Upload error', upErr); continue; }
+
+    const { data: urlData } = _supa.storage.from(SB_PHOTO_BUCKET).getPublicUrl(path);
+    const url = urlData?.publicUrl;
+    if (!url) continue;
+
+    await fetch(SB_URL + '/rest/v1/quote_photos', {
+      method: 'POST',
+      headers: {
+        'apikey': SB_ANON, 'Authorization': 'Bearer ' + session.access_token,
+        'Content-Type': 'application/json', 'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        quote_id:     targetQuote.id,
+        tenant_id:    PROP_TENANT_ID,
+        url,
+        storage_path: path,
+        filename:     file.name,
+        sort_order:   allPhotos.length + i,
+        uploaded_by:  session.user.id,
+      })
+    });
+  }
+
+  if (statusEl) { statusEl.textContent = 'Done ✓'; setTimeout(() => { statusEl.style.display = 'none'; }, 2000); }
+
+  // Reload photos
+  const qIds   = allQuotes.map(q => q.id);
+  const inList = '(' + qIds.join(',') + ')';
+  const r = await fetch(
+    SB_URL + '/rest/v1/quote_photos?quote_id=in.' + inList + '&select=id,quote_id,url,storage_path,filename,caption,sort_order&order=sort_order.asc,created_at.asc',
+    { headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + session.access_token } }
+  );
+  allPhotos = r.ok ? (await r.json()) : [];
+  renderPhotos();
+  renderStats();
+  toast(files.length + ' photo' + (files.length !== 1 ? 's' : '') + ' uploaded ✓');
+}
+
+async function deletePropPhoto(photoId, storagePath) {
+  if (!confirm('Remove this photo from the property?')) return;
+  if (storagePath) await _supa.storage.from(SB_PHOTO_BUCKET).remove([storagePath]);
+  await fetch(SB_URL + '/rest/v1/quote_photos?id=eq.' + photoId, {
+    method: 'DELETE',
+    headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + session.access_token, 'Prefer': 'return=minimal' }
+  });
+  allPhotos = allPhotos.filter(p => p.id !== photoId);
+  renderPhotos();
+  renderStats();
+  toast('Photo removed');
+}
+
+// ─── ACTIONS ─────────────────────────────────────────────────────────
+function openQuote(id) {
+  window.location.href = 'PricingEstimator.html?load=' + id;
+}
+
+function newQuote() {
+  // Pre-fill customer info via URL params if possible
+  if (anchorQuote) {
+    const p = new URLSearchParams({
+      name:  anchorQuote.customer_name    || '',
+      addr:  anchorQuote.customer_address || '',
+      phone: anchorQuote.customer_phone   || '',
+      email: anchorQuote.customer_email   || '',
+    });
+    window.location.href = 'PricingEstimator.html?prefill=1&' + p.toString();
+  } else {
+    window.location.href = 'PricingEstimator.html';
+  }
+}
+
+function openCOForQuote(quoteId) {
+  window.location.href = 'change-orders.html?quote_id=' + quoteId;
+}
+
+function newCO() {
+  // If there's only one quote, go straight to CO for it; otherwise pick most recent
+  if (allQuotes.length === 1) {
+    openCOForQuote(allQuotes[0].id);
+  } else if (allQuotes.length > 1) {
+    // Use the anchor quote
+    openCOForQuote(anchorQuote.id);
+  } else {
+    window.location.href = 'change-orders.html';
+  }
+}
+
+async function duplicateQuote(id) {
+  const original = allQuotes.find(q => q.id === id);
+  if (!original) return;
+
+  const res = await fetch(SB_URL + '/rest/v1/quotes?id=eq.' + id + '&select=*', {
+    headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + session.access_token }
+  });
+  const data = await res.json();
+  const q = data?.[0];
+  if (!q) { toast('Could not load quote', true); return; }
+
+  const numRes = await fetch(SB_URL + '/rest/v1/rpc/next_quote_number', {
+    method: 'POST', body: '{}',
+    headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' }
+  });
+  const newNum = await numRes.json();
+
+  const payload = {
+    tenant_id:        '5249f9c0-9fca-46c8-896c-4e35be437024',
+    created_by:       session.user.id,
+    assigned_rep_id:  session.user.id,
+    quote_number:     newNum,
+    customer_name:    (q.customer_name || '') + ' (Copy)',
+    customer_address: q.customer_address,
+    customer_phone:   q.customer_phone,
+    customer_email:   q.customer_email,
+    template_id:      q.template_id,
+    items:            q.items,
+    color_selections: q.color_selections,
+    totals:           q.totals,
+    notes:            q.notes,
+    status:           'draft',
+    dimension_data:   q.dimension_data,
+    payment_data:     q.payment_data,
+    hero_photo_url:   q.hero_photo_url,
+  };
+
+  const ins = await fetch(SB_URL + '/rest/v1/quotes', {
+    method: 'POST', body: JSON.stringify(payload),
+    headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json', 'Prefer': 'return=representation' }
+  });
+  if (!ins.ok) { toast('Duplicate failed', true); return; }
+  toast('Duplicated as ' + newNum + ' ✓');
+  // Reload property
+  await loadProperty(anchorQuote.id);
+}
+
+async function updateStatus(id, status) {
+  const res = await fetch(SB_URL + '/rest/v1/quotes?id=eq.' + id, {
+    method: 'PATCH', body: JSON.stringify({ status }),
+    headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }
+  });
+  if (!res.ok) { toast('Status update failed', true); return; }
+  const q = allQuotes.find(x => x.id === id);
+  if (q) q.status = status;
+  renderStats();
+  renderQuotes();
+  toast('Status → ' + status + ' ✓');
+}
+
+function promptDelete(id, qnum, customer) {
+  pendingDeleteId = id;
+  document.getElementById('delQnum').textContent = qnum;
+  document.getElementById('delCust').textContent = customer;
+  document.getElementById('deleteModal').classList.remove('hidden');
+}
+
+async function confirmDelete() {
+  if (!pendingDeleteId) return;
+  const res = await fetch(SB_URL + '/rest/v1/quotes?id=eq.' + pendingDeleteId, {
+    method: 'DELETE',
+    headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + session.access_token, 'Prefer': 'return=minimal' }
+  });
+  document.getElementById('deleteModal').classList.add('hidden');
+  if (!res.ok) { toast('Delete failed', true); return; }
+  allQuotes = allQuotes.filter(q => q.id !== pendingDeleteId);
+  pendingDeleteId = null;
+  renderStats();
+  renderQuotes();
+  toast('Quote deleted');
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────
+function statusColor(s) {
+  return { draft:'#475569', sent:'#1d4ed8', signed:'#065f46', void:'#991b1b' }[s] || '#475569';
+}
+
+function h(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function toast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show' + (isError ? ' error' : '');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => { t.className = ''; }, 3200);
+}
+
+// ─── Cancellation Agreement (live, in-dashboard) ─────────────────────
+let _cxCtx = null, _cxDrawing = false, _cxHasInk = false, _cxLocked = false;
+function openCancellationForm() {
+  const q = (typeof anchorQuote !== 'undefined' && anchorQuote) ? anchorQuote : {};
+  const parts = (q.customer_address || '').split(', ');
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+  set('cxName', q.customer_name || '');
+  set('cxAddr', parts[0] || '');
+  set('cxCSZ', parts.slice(1).join(', '));
+  ['cxEstNum','cxEstNum2','cxEstDate','cxEstDate2','cxEffDate'].forEach(id => set(id, ''));
+  set('cxPrint', q.customer_name || '');
+  document.getElementById('cxNameEcho').textContent = q.customer_name || 'the customer';
+  document.getElementById('cxDate').innerHTML = '&nbsp;';
+  document.getElementById('cxLockNote').style.display = 'none';
+  _cxLocked = false; _cxHasInk = false;
+  document.querySelectorAll('#cxForm .cxin, #cxForm .cxsm, #cxForm .cxta').forEach(el => { el.readOnly = false; el.style.background = '#fffef8'; });
+  const btn = document.getElementById('cxSignBtn'); if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.style.display = ''; }
+  document.getElementById('cxModal').style.display = 'flex';
+  setTimeout(initCxSig, 60);
+}
+function closeCancellation() { document.getElementById('cxModal').style.display = 'none'; }
+function cxSyncEcho() {
+  const nm = (document.getElementById('cxName')?.value || '').trim();
+  document.getElementById('cxNameEcho').textContent = nm || 'the customer';
+  const pn = document.getElementById('cxPrint'); if (pn && !pn.value.trim()) pn.value = nm;
+}
+function cxSyncEst() {
+  const n = document.getElementById('cxEstNum')?.value || ''; const d = document.getElementById('cxEstDate')?.value || '';
+  const n2 = document.getElementById('cxEstNum2'); if (n2) n2.value = n;
+  const d2 = document.getElementById('cxEstDate2'); if (d2) d2.value = d;
+}
+function initCxSig() {
+  const c = document.getElementById('cxSig'); if (!c) return;
+  _cxCtx = c.getContext('2d');
+  _cxCtx.clearRect(0, 0, c.width, c.height);
+  _cxCtx.strokeStyle = '#1a3a5c'; _cxCtx.lineWidth = 2.5; _cxCtx.lineCap = 'round'; _cxCtx.lineJoin = 'round';
+  const pos = e => { const r = c.getBoundingClientRect(); const sx = c.width / r.width, sy = c.height / r.height; const s = e.touches ? e.touches[0] : e; return { x: (s.clientX - r.left) * sx, y: (s.clientY - r.top) * sy }; };
+  const down = e => { if (_cxLocked) return; e.preventDefault(); _cxDrawing = true; const p = pos(e); _cxCtx.beginPath(); _cxCtx.moveTo(p.x, p.y); };
+  const move = e => { if (!_cxDrawing || _cxLocked) return; e.preventDefault(); const p = pos(e); _cxCtx.lineTo(p.x, p.y); _cxCtx.stroke(); _cxHasInk = true; };
+  const up = () => { _cxDrawing = false; };
+  c.onmousedown = down; c.onmousemove = move; c.onmouseup = up; c.onmouseleave = up;
+  c.ontouchstart = down; c.ontouchmove = move; c.ontouchend = up;
+}
+function clearCxSig() { if (_cxLocked) return; const c = document.getElementById('cxSig'); if (_cxCtx && c) { _cxCtx.clearRect(0, 0, c.width, c.height); _cxHasInk = false; } }
+let _caRows = [];
+async function signCancellation() {
+  if (_cxLocked) return;
+  if (!_cxHasInk) { toast('Please have the client sign first.', true); return; }
+  const now = new Date();
+  const stamp = now.toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+  document.getElementById('cxDate').textContent = stamp;
+  document.querySelectorAll('#cxForm .cxin, #cxForm .cxsm, #cxForm .cxta').forEach(el => { el.readOnly = true; el.style.background = '#fff'; });
+  _cxLocked = true;
+  document.getElementById('cxLockNote').style.display = 'block';
+  const btn = document.getElementById('cxSignBtn'); if (btn) { btn.disabled = true; btn.style.opacity = '.5'; }
+  toast('Signed — saving to property…');
+  const v = id => (document.getElementById(id)?.value || '').trim();
+  const propAddr = (typeof anchorQuote !== 'undefined' && anchorQuote && anchorQuote.customer_address) ? anchorQuote.customer_address : [v('cxAddr'), v('cxCSZ')].filter(Boolean).join(', ');
+  const payload = {
+    quote_id:         (typeof anchorQuote !== 'undefined' && anchorQuote) ? anchorQuote.id : null,
+    customer_name:    v('cxName'),
+    customer_address: propAddr,
+    estimate_number:  v('cxEstNum'),
+    estimate_date:    v('cxEstDate'),
+    effective_date:   v('cxEffDate'),
+    clauses:          { c2: v('cxCl2'), c3: v('cxCl3'), addr: v('cxAddr'), csz: v('cxCSZ') },
+    print_name:       v('cxPrint') || v('cxName'),
+    signature_data:   _cxHasInk ? document.getElementById('cxSig').toDataURL('image/png') : null,
+    signed_at:        now.toISOString(),
+  };
+  try {
+    const r = await fetch(SB_URL + '/rest/v1/cancellation_agreements', {
+      method: 'POST',
+      headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify(payload),
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    toast('✓ Cancellation agreement saved to property');
+    loadCancellations(propAddr);
+  } catch (err) {
+    console.error('[cancellation save]', err);
+    toast('Signed, but save failed: ' + err.message, true);
+  }
+}
+async function loadCancellations(address) {
+  const el = document.getElementById('caList'); if (!el) return;
+  if (!address) { renderCancellations([]); return; }
+  try {
+    const r = await fetch(SB_URL + '/rest/v1/cancellation_agreements?customer_address=eq.' + encodeURIComponent(address) + '&select=*&order=created_at.desc', {
+      headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + session.access_token }
+    });
+    _caRows = r.ok ? await r.json() : [];
+    if (!Array.isArray(_caRows)) _caRows = [];
+    renderCancellations(_caRows);
+  } catch { renderCancellations([]); }
+}
+function renderCancellations(rows) {
+  const el = document.getElementById('caList'); const pill = document.getElementById('caCountPill');
+  if (pill) pill.textContent = rows.length;
+  if (!el) return;
+  if (!rows.length) { el.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:12px 4px">No cancellation agreements for this property.</div>'; return; }
+  el.innerHTML = rows.map(c => {
+    const when = c.signed_at ? new Date(c.signed_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : (c.created_at ? new Date(c.created_at).toLocaleDateString('en-US') : '—');
+    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border:1px solid #e6ecf3;border-radius:8px;margin-bottom:6px">
+      <div><div style="font-weight:600;font-size:13px;color:#1a3a5c">${h(c.customer_name || '—')}${c.estimate_number ? ' · Est #' + h(c.estimate_number) : ''}</div>
+      <div style="font-size:11px;color:#7a90a8">${c.signature_data ? '🔒 Signed' : 'Draft'} · ${when}${c.effective_date ? ' · effective ' + h(c.effective_date) : ''}</div></div>
+      <button class="btn btn-ghost" style="padding:5px 10px" onclick="viewCancellation('${c.id}')">View</button>
+    </div>`;
+  }).join('');
+}
+function viewCancellation(id) {
+  const c = _caRows.find(x => x.id === id); if (!c) return;
+  openCancellationForm();
+  setTimeout(() => {
+    const set = (fid, val) => { const el = document.getElementById(fid); if (el) el.value = val || ''; };
+    const cl = c.clauses || {};
+    set('cxName', c.customer_name);
+    set('cxAddr', cl.addr || (c.customer_address || '').split(', ')[0] || '');
+    set('cxCSZ', cl.csz || (c.customer_address || '').split(', ').slice(1).join(', '));
+    set('cxEstNum', c.estimate_number); set('cxEstNum2', c.estimate_number);
+    set('cxEstDate', c.estimate_date); set('cxEstDate2', c.estimate_date);
+    set('cxEffDate', c.effective_date);
+    set('cxPrint', c.print_name || c.customer_name);
+    set('cxCl2', cl.c2 || ''); set('cxCl3', cl.c3 || '');
+    document.getElementById('cxNameEcho').textContent = c.customer_name || 'the customer';
+    document.getElementById('cxDate').textContent = c.signed_at ? new Date(c.signed_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : '';
+    if (c.signature_data && _cxCtx) { const img = new Image(); img.onload = () => { const cv = document.getElementById('cxSig'); _cxCtx.clearRect(0, 0, cv.width, cv.height); _cxCtx.drawImage(img, 0, 0, cv.width, cv.height); _cxHasInk = true; }; img.src = c.signature_data; }
+    document.querySelectorAll('#cxForm .cxin, #cxForm .cxsm, #cxForm .cxta').forEach(el => { el.readOnly = true; el.style.background = '#fff'; });
+    _cxLocked = true;
+    document.getElementById('cxLockNote').style.display = c.signature_data ? 'block' : 'none';
+    const btn = document.getElementById('cxSignBtn'); if (btn) btn.style.display = 'none';
+  }, 130);
+}
+function printCancellation() {
+  const v = id => (document.getElementById(id)?.value || '').trim();
+  const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const name = v('cxName') || '________________________', addr = v('cxAddr'), csz = v('cxCSZ');
+  const estNum = v('cxEstNum') || '________', estDate = v('cxEstDate') || '____________', effDate = v('cxEffDate') || '______________';
+  const printName = v('cxPrint') || name;
+  const cl2 = v('cxCl2') || 'The Parties hereby release each other from all actions, causes of actions, liabilities or claims.';
+  const cl3 = v('cxCl3') || '';
+  const dateStamp = (document.getElementById('cxDate')?.textContent || '').trim();
+  const sig = _cxHasInk ? document.getElementById('cxSig').toDataURL('image/png') : '';
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Termination of Agreement — ${esc(name)}</title>
+  <style>@page{size:letter;margin:.9in}body{font-family:'Times New Roman',Georgia,serif;font-size:13px;color:#111;line-height:1.75;max-width:7in;margin:0 auto}h1{font-size:20px;text-align:center;margin:0 0 2px}h2{font-size:14px;text-align:center;font-weight:600;color:#444;margin:0 0 26px}ol li{margin:11px 0}.line{border-bottom:1px solid #111;display:inline-block;min-width:220px}.hdr{display:flex;justify-content:space-between;margin-bottom:22px}.brand{font-size:16px;font-weight:800;color:#1a3a5c;font-family:Arial}</style></head><body>
+  <div class="hdr"><div class="brand">RENEW HOME EXTERIORS</div><div style="font-size:11px;color:#555;text-align:right;font-family:Arial">1361 Wooster Rd W, Unit A<br>Barberton, OH 44203<br>(330) 208-9366</div></div>
+  <h1>TERMINATION OF AGREEMENT</h1><h2>Mutual Release &mdash; Cancellation of Order</h2>
+  <p>This Agreement is executed by and between the following:</p>
+  <p><strong>Renew Home Exteriors</strong><br>1361 Wooster Rd W, Unit A<br>Barberton, OH 44203</p><p>and</p>
+  <p><strong>${esc(name)}</strong><br>${esc(addr) || '&nbsp;'}<br>${esc(csz) || '&nbsp;'}</p>
+  <p>This agreement is entered into now by and between Renew Home Exteriors and <strong>${esc(name)}</strong>, collectively referred to as the &ldquo;Parties&rdquo; on the <strong>#${esc(estNum)}</strong> Estimate Agreement dated <strong>${esc(estDate)}</strong>.</p>
+  <ol><li>The Parties agree the <strong>#${esc(estNum)}</strong> Estimate agreement between them dated <strong>${esc(estDate)}</strong> shall be terminated effective <strong>${esc(effDate)}</strong>.</li>
+  <li>${esc(cl2)}</li>${cl3 ? `<li>${esc(cl3)}</li>` : ''}</ol>
+  <div style="margin-top:44px"><div style="font-size:11px;color:#555">Client Signature:</div>${sig ? `<img src="${sig}" style="height:70px;display:block;margin:2px 0">` : '<div class="line" style="min-width:320px;margin-top:22px"></div>'}
+  <p style="margin-top:14px">Print Name: <strong>${esc(printName)}</strong></p>
+  <p style="margin-top:6px">Date: <span class="line">${esc(dateStamp) || '&nbsp;'}</span></p></div>
+  </body></html>`;
+  const w = window.open('', '_blank'); if (!w) { toast('Allow popups to print.', true); return; }
+  w.document.write(html); w.document.close(); w.onload = function () { w.focus(); w.print(); };
+}
+</script>
+
+<!-- ── Cancellation Agreement modal (live, editable, signable) ── -->
+<style>
+  #cxModal .cxin { border:none;border-bottom:1px solid #888;font:inherit;padding:2px 3px;background:#fffef8;width:100%;max-width:360px }
+  #cxModal .cxsm { border:none;border-bottom:1px solid #888;font:inherit;padding:1px 3px;background:#fffef8;width:120px;text-align:center }
+  #cxModal .cxta { border:1px solid #d8dee6;border-radius:5px;font:inherit;padding:6px 8px;background:#fffef8;width:100%;box-sizing:border-box;resize:vertical;min-height:44px }
+  #cxForm ol li { margin:10px 0 }
+  #cxForm p { margin:8px 0 }
+</style>
+<div id="cxModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9000;align-items:flex-start;justify-content:center;overflow:auto;padding:24px">
+  <div style="background:#fff;border-radius:12px;max-width:720px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.3);position:relative">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 22px;border-bottom:1px solid #e6ecf3;position:sticky;top:0;background:#fff;border-radius:12px 12px 0 0;z-index:2">
+      <strong style="font-size:16px;color:#1a3a5c">🚫 Cancellation Agreement</strong>
+      <button onclick="closeCancellation()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#888">&times;</button>
+    </div>
+    <div id="cxForm" style="padding:22px;font-family:'Times New Roman',Georgia,serif;font-size:13px;color:#111;line-height:1.7">
+      <div style="display:flex;justify-content:space-between;margin-bottom:14px">
+        <strong style="color:#1a3a5c;font-size:15px;font-family:Arial">RENEW HOME EXTERIORS</strong>
+        <span style="font-size:11px;color:#555;text-align:right;font-family:Arial">1361 Wooster Rd W, Unit A<br>Barberton, OH 44203</span>
+      </div>
+      <h2 style="text-align:center;margin:0 0 2px;font-size:18px">TERMINATION OF AGREEMENT</h2>
+      <div style="text-align:center;color:#555;margin-bottom:18px">Mutual Release &mdash; Cancellation of Order</div>
+      <p>This Agreement is executed by and between the following:</p>
+      <p><strong>Renew Home Exteriors</strong><br>1361 Wooster Rd W, Unit A<br>Barberton, OH 44203</p>
+      <p>and</p>
+      <p>
+        <input id="cxName" class="cxin" placeholder="Customer Name" oninput="cxSyncEcho()"><br>
+        <input id="cxAddr" class="cxin" placeholder="Address"><br>
+        <input id="cxCSZ" class="cxin" placeholder="City, State, Zip">
+      </p>
+      <p>This agreement is entered into now by and between Renew Home Exteriors and <strong id="cxNameEcho">the customer</strong>, collectively referred to as the &ldquo;Parties&rdquo; on the #<input id="cxEstNum" class="cxsm" placeholder="Estimate #" oninput="cxSyncEst()"> Estimate Agreement dated <input id="cxEstDate" class="cxsm" placeholder="date" oninput="cxSyncEst()">.</p>
+      <ol>
+        <li>The Parties agree the #<input id="cxEstNum2" class="cxsm" placeholder="Estimate #"> Estimate agreement between them dated <input id="cxEstDate2" class="cxsm" placeholder="date"> shall be terminated effective <input id="cxEffDate" class="cxsm" placeholder="effective date">.</li>
+        <li><textarea id="cxCl2" class="cxta">The Parties hereby release each other from all actions, causes of actions, liabilities or claims.</textarea></li>
+        <li><textarea id="cxCl3" class="cxta">The Parties agree not to disparage Renew Home Exteriors, its products, services, agents, contractors or employees either verbally, in writing, or through electronic presence including but not limited to social media, blog posts, and/or forum posts.</textarea></li>
+      </ol>
+      <div style="margin-top:20px">
+        <div style="font-size:11px;color:#555;margin-bottom:4px">Client Signature:</div>
+        <canvas id="cxSig" width="600" height="120" style="border:1px solid #c8d0dc;border-radius:6px;width:100%;max-width:600px;touch-action:none;background:#fff;display:block"></canvas>
+        <button type="button" onclick="clearCxSig()" style="font-size:11px;margin-top:4px;background:none;border:1px solid #ccc;border-radius:5px;padding:3px 10px;cursor:pointer">Clear signature</button>
+        <p style="margin-top:12px">Print Name: <input id="cxPrint" class="cxin" style="max-width:280px" placeholder="Print name"></p>
+        <p>Date: <span id="cxDate" style="border-bottom:1px solid #111;min-width:220px;display:inline-block;font-weight:600;color:#1a3a5c">&nbsp;</span></p>
+        <div id="cxLockNote" style="display:none;font-size:11px;color:#2e7d32;font-weight:700;margin-top:6px">🔒 Signed &amp; date locked</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;padding:14px 22px;border-top:1px solid #e6ecf3;position:sticky;bottom:0;background:#fff;border-radius:0 0 12px 12px">
+      <button id="cxSignBtn" onclick="signCancellation()" style="flex:1;padding:11px;background:#2e7d32;color:#fff;border:none;border-radius:7px;font-weight:700;cursor:pointer">✍ Client Sign &amp; Lock Date</button>
+      <button onclick="printCancellation()" style="flex:1;padding:11px;background:#1a3a5c;color:#fff;border:none;border-radius:7px;font-weight:700;cursor:pointer">🖨 Print / PDF</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

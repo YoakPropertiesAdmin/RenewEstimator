@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EagleView Reports — Renew Home Exteriors</title>
+<link rel="icon" href="favicon.ico">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #eef2f7; color: #1e2a38; }
+  header { background: #1a3a5c; color: #fff; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  header .title { font-size: 18px; font-weight: 900; letter-spacing: -.3px; }
+  header .sub { font-size: 11px; color: #93b4d0; }
+  header a { color: #cfe0ef; font-size: 13px; text-decoration: none; font-weight: 600; }
+  .wrap { max-width: 1100px; margin: 18px auto; padding: 0 16px; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+  .tab { padding: 7px 14px; border-radius: 20px; border: 1px solid #c9d4e0; background: #fff; cursor: pointer; font-size: 13px; font-weight: 700; color: #55657a; }
+  .tab.active { background: #1a3a5c; color: #fff; border-color: #1a3a5c; }
+  .card { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.06); overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 10px 12px; background: #f5f8fb; color: #6b7a90; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; border-bottom: 1px solid #e6ecf3; }
+  td { padding: 11px 12px; border-bottom: 1px solid #eef2f7; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 800; }
+  .b-complete { background: #e4f5e6; color: #1a7a2e; }
+  .b-pending  { background: #fff2d8; color: #9a6b00; }
+  .b-failed   { background: #fbe4e4; color: #b02020; }
+  .btn { padding: 6px 12px; border-radius: 6px; border: 1px solid #1a6bc4; background: #fff; color: #1a3a5c; font-weight: 700; font-size: 12px; cursor: pointer; text-decoration: none; display: inline-block; }
+  .btn-go { background: #1a6bc4; color: #fff; }
+  .muted { color: #90a0b3; font-size: 12px; }
+  .empty { padding: 40px; text-align: center; color: #90a0b3; }
+  #login { max-width: 380px; margin: 80px auto; text-align: center; }
+  #login button { margin-top: 14px; padding: 11px 22px; border-radius: 8px; border: none; background: #1a3a5c; color: #fff; font-weight: 700; cursor: pointer; font-size: 14px; }
+  .addr { font-weight: 700; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="title">📐 EagleView Reports</div>
+    <div class="sub">Ordered reports & measurements — Renew Home Exteriors</div>
+  </div>
+  <div style="display:flex;gap:16px;align-items:center">
+    <a href="#" onclick="load();return false">🔄 Refresh list</a>
+    <a href="PricingEstimator.html">← Estimator</a>
+  </div>
+</header>
+
+<div id="login" style="display:none">
+  <h3>Please sign in</h3>
+  <p class="muted" style="margin-top:6px">Sign in with your Renew Home Exteriors Google account.</p>
+  <button onclick="signIn()">Sign in with Google</button>
+</div>
+
+<div class="wrap" id="main" style="display:none">
+  <div class="tabs">
+    <div class="tab active" data-f="all" onclick="setFilter('all')">All</div>
+    <div class="tab" data-f="complete" onclick="setFilter('complete')">✅ Ready</div>
+    <div class="tab" data-f="pending" onclick="setFilter('pending')">⏳ Pending</div>
+  </div>
+  <div class="card">
+    <table>
+      <thead>
+        <tr><th>Address</th><th>Report</th><th>Status</th><th>Ordered</th><th>Delivered</th><th>Actions</th></tr>
+      </thead>
+      <tbody id="rows"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+const SUPABASE_URL = 'https://chnkkcdstxtfnoqelwgz.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_cQ1hnPv5r5N6gmJq8CLmMw_rP_RNiSA';
+const _supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const LABELS = { full: 'Full House (Roof + Siding)', wallsdoors: 'Walls, Windows & Doors', roof: 'Roof', siding: 'Siding' };
+let allRows = [];
+let filter = 'all';
+
+const esc = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const fmtDate = s => s ? new Date(s).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+
+function signIn() {
+  _supa.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.href } });
+}
+function setFilter(f) {
+  filter = f;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.f === f));
+  render();
+}
+
+async function load() {
+  const { data: { session } } = await _supa.auth.getSession();
+  if (!session) { document.getElementById('login').style.display = 'block'; document.getElementById('main').style.display = 'none'; return; }
+  document.getElementById('login').style.display = 'none';
+  document.getElementById('main').style.display = 'block';
+  const r = await fetch(SUPABASE_URL + '/rest/v1/eagleview_reports?select=*&order=ordered_at.desc', {
+    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + session.access_token }
+  });
+  const rows = await r.json();
+  // Dedupe by ev_report_id (one row per EagleView report; prefer complete / newest)
+  const byId = {};
+  (Array.isArray(rows) ? rows : []).forEach(x => {
+    const k = x.ev_report_id || x.id;
+    const cur = byId[k];
+    const better = !cur || (x.status === 'complete' && cur.status !== 'complete') || (x.status === cur.status && new Date(x.ordered_at) > new Date(cur.ordered_at));
+    if (better) byId[k] = x;
+  });
+  allRows = Object.values(byId).sort((a, b) => new Date(b.ordered_at) - new Date(a.ordered_at));
+  render();
+}
+
+function render() {
+  const list = allRows.filter(x =>
+    filter === 'all' ? true : (filter === 'complete' ? x.status === 'complete' : x.status !== 'complete')
+  );
+  const tbody = document.getElementById('rows');
+  if (!list.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">No reports here yet.</td></tr>'; return; }
+  tbody.innerHTML = list.map(x => {
+    const addr = [x.address, x.city, x.state, x.zip].filter(Boolean).join(', ');
+    const badge = x.status === 'complete' ? '<span class="badge b-complete">Ready</span>'
+      : (x.status === 'failed' ? '<span class="badge b-failed">Failed</span>' : '<span class="badge b-pending">' + esc(x.status) + '</span>');
+    const q = 'evaddr=' + encodeURIComponent(x.address || '') + '&evcity=' + encodeURIComponent(x.city || '') + '&evstate=' + encodeURIComponent(x.state || '') + '&evzip=' + encodeURIComponent(x.zip || '');
+    const action = x.status === 'complete'
+      ? '<a class="btn btn-go" href="PricingEstimator.html?' + q + '">Open in Estimator →</a>'
+      : '<button class="btn" onclick="refresh(\'' + esc(x.ev_report_id) + '\')">Check now</button>';
+    return '<tr>'
+      + '<td><span class="addr">' + esc(addr || '—') + '</span></td>'
+      + '<td>' + esc(LABELS[x.report_type] || x.report_type) + '<div class="muted">EV #' + esc(x.ev_report_id || '—') + '</div></td>'
+      + '<td>' + badge + '</td>'
+      + '<td class="muted">' + fmtDate(x.ordered_at) + '</td>'
+      + '<td class="muted">' + fmtDate(x.delivered_at) + '</td>'
+      + '<td>' + action + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+async function refresh(evId) {
+  if (!evId) return;
+  const { data: { session } } = await _supa.auth.getSession();
+  if (!session) return;
+  await fetch(SUPABASE_URL + '/functions/v1/eagleview-measurement', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + session.access_token, 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'refresh', reportId: evId })
+  }).catch(() => {});
+  load();
+}
+
+_supa.auth.onAuthStateChange(() => load());
+load();
+</script>
+</body>
+</html>

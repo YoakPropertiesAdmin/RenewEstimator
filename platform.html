@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Platform — RHE</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+  :root {
+    --primary:#1a3a5c; --accent:#e8500a; --light:#f0f4f9;
+    --border:#d0d9e8; --success:#2a7a3b; --danger:#c0392b;
+    --text:#1e2a38; --muted:#6b7a90; --card:#fff;
+    --shadow:0 2px 12px rgba(26,58,92,0.10);
+    --platform:#0d1f36;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:var(--light);color:var(--text);font-size:14px}
+
+  /* LOGIN GATE */
+  #loginGate{position:fixed;inset:0;z-index:9999;background:var(--platform);
+    display:flex;align-items:center;justify-content:center;padding:20px}
+  .login-card{background:#fff;border-radius:14px;padding:36px 40px;width:100%;
+    max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.5)}
+  .login-logo{text-align:center;margin-bottom:28px}
+  .login-logo .logo-mark{font-size:22px;font-weight:900;letter-spacing:-1px;color:var(--primary);display:block;margin-bottom:8px}
+  .login-logo .platform-badge{display:inline-block}
+  .login-err{color:var(--danger);font-size:12px;margin-top:10px;min-height:16px}
+  .login-card .btn{width:100%;margin-top:18px;padding:11px;font-size:14px}
+  .login-card label{margin-top:14px}
+  .login-card label:first-of-type{margin-top:0}
+  .spinner{width:40px;height:40px;border:4px solid rgba(255,255,255,0.3);
+    border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* HEADER */
+  header{background:var(--platform);color:#fff;padding:14px 28px;
+    display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100;
+    box-shadow:0 2px 12px rgba(0,0,0,0.3)}
+  .logo-mark{font-size:22px;font-weight:900;letter-spacing:-1px}
+  .platform-badge{background:var(--accent);color:#fff;padding:3px 10px;
+    border-radius:12px;font-size:11px;font-weight:700;letter-spacing:.5px}
+  .hdr-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+  .hdr-user{font-size:12px;opacity:.75}
+  header button.lnk{background:none;border:none;color:rgba(255,255,255,.7);
+    font-size:12px;cursor:pointer;padding:5px 12px;border-radius:14px;transition:background .15s}
+  header button.lnk:hover{background:rgba(255,255,255,.15);color:#fff}
+
+  /* TABS */
+  .tab-nav{background:var(--card);border-bottom:2px solid var(--border);
+    display:flex;padding:0 28px;gap:0}
+  .tab-btn{background:none;border:none;cursor:pointer;padding:14px 22px;font-size:13px;
+    font-weight:600;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px;
+    transition:color .15s,border-color .15s}
+  .tab-btn.active{color:var(--primary);border-bottom-color:var(--accent)}
+  .tab-btn:hover:not(.active){color:var(--primary)}
+
+  /* PANELS */
+  .tab-panel{display:none;padding:28px}
+  .tab-panel.active{display:block}
+
+  /* CARDS */
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;
+    padding:20px;box-shadow:var(--shadow)}
+  .card h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;
+    color:var(--primary);margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid var(--accent)}
+
+  /* TOOLBAR */
+  .toolbar{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap}
+  .toolbar h2{font-size:17px;font-weight:700;color:var(--primary);flex:1}
+
+  /* BUTTONS */
+  .btn{padding:8px 16px;border-radius:7px;border:none;cursor:pointer;font-size:13px;
+    font-weight:600;transition:all .15s;white-space:nowrap}
+  .btn-primary{background:var(--primary);color:#fff}
+  .btn-primary:hover{background:#255080}
+  .btn-accent{background:var(--accent);color:#fff}
+  .btn-accent:hover{background:#c73e06}
+  .btn-ghost{background:transparent;color:var(--primary);border:1px solid var(--border)}
+  .btn-ghost:hover{background:var(--light)}
+  .btn-danger{background:var(--danger);color:#fff}
+  .btn-danger:hover{background:#a03020}
+  .btn-success{background:var(--success);color:#fff}
+  .btn-success:hover{background:#1f5e2c}
+  .btn-sm{padding:5px 10px;font-size:11px}
+
+  /* TABLE */
+  .tbl-wrap{overflow-x:auto;border-radius:8px;border:1px solid var(--border)}
+  table{width:100%;border-collapse:collapse;background:#fff}
+  thead tr{background:var(--light)}
+  th{padding:10px 14px;font-size:11px;font-weight:700;text-transform:uppercase;
+    letter-spacing:.5px;color:var(--muted);text-align:left;white-space:nowrap}
+  td{padding:11px 14px;border-top:1px solid var(--border);font-size:13px;vertical-align:middle}
+  tr:hover td{background:#f8fafd}
+
+  /* BADGES */
+  .badge{padding:3px 9px;border-radius:10px;font-size:10px;font-weight:700;white-space:nowrap}
+  .badge-active{background:#d4edda;color:#155724}
+  .badge-inactive{background:#f8d7da;color:#721c24}
+  .badge-platform_owner{background:#1a3a5c;color:#fff}
+  .badge-super_admin{background:#6f42c1;color:#fff}
+  .badge-admin{background:#cce5ff;color:#004085}
+  .badge-director{background:#d4edda;color:#155724}
+  .badge-user{background:#e2e3e5;color:#383d41}
+
+  /* FORMS */
+  label{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:4px;margin-top:12px}
+  label:first-child{margin-top:0}
+  input[type=text],input[type=email],input[type=tel],input[type=url],select,textarea{
+    width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;
+    font-size:13px;color:var(--text);background:#fafcff;transition:border-color .2s}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--primary);background:#fff}
+  textarea{resize:vertical;min-height:60px}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px}
+
+  /* MODAL */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;
+    display:flex;align-items:center;justify-content:center;padding:20px}
+  .modal-overlay.hidden{display:none}
+  .modal{background:#fff;border-radius:14px;padding:28px;width:100%;max-width:520px;
+    max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.25)}
+  .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+  .modal-header h3{font-size:16px;font-weight:700;color:var(--primary)}
+  .modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);
+    line-height:1;padding:0 4px}
+  .modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;
+    padding-top:16px;border-top:1px solid var(--border)}
+
+  /* ORG CARDS GRID */
+  .org-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px}
+  .org-card{background:var(--card);border:1px solid var(--border);border-radius:12px;
+    padding:20px;box-shadow:var(--shadow);transition:box-shadow .2s,border-color .2s}
+  .org-card:hover{box-shadow:0 4px 20px rgba(26,58,92,0.15);border-color:#8ba8c8}
+  .org-logo{width:48px;height:48px;border-radius:10px;background:var(--primary);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;
+    font-weight:700;margin-bottom:12px;overflow:hidden}
+  .org-logo img{width:100%;height:100%;object-fit:cover}
+  .org-name{font-size:16px;font-weight:700;color:var(--primary);margin-bottom:3px}
+  .org-slug{font-size:11px;color:var(--muted);font-family:monospace;margin-bottom:10px}
+  .org-meta{font-size:12px;color:var(--muted);line-height:1.6}
+  .org-actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+
+  /* DESIGN PANEL */
+  .design-panel{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  .color-preview{width:40px;height:40px;border-radius:8px;border:2px solid var(--border);
+    display:inline-block;vertical-align:middle;margin-left:8px}
+
+  /* STATS STRIP */
+  .stats-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;
+    padding:16px 20px;box-shadow:var(--shadow)}
+  .stat-val{font-size:28px;font-weight:800;color:var(--primary)}
+  .stat-lbl{font-size:11px;color:var(--muted);margin-top:2px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+
+  /* TOAST */
+  #toast{position:fixed;bottom:28px;right:28px;background:#1e2a38;color:#fff;padding:12px 20px;
+    border-radius:10px;font-size:13px;font-weight:600;transform:translateY(80px);opacity:0;
+    transition:all .3s;z-index:9999;pointer-events:none}
+  #toast.show{transform:translateY(0);opacity:1}
+  #toast.error{background:var(--danger)}
+
+  /* ENTER ORG BANNER */
+  .entering-banner{background:linear-gradient(135deg,var(--primary),#2d5a8e);color:#fff;
+    padding:14px 28px;display:flex;align-items:center;gap:16px;font-size:13px}
+  .entering-banner strong{font-size:15px}
+  .entering-banner button{margin-left:auto;background:rgba(255,255,255,.2);
+    border:1px solid rgba(255,255,255,.4);color:#fff;padding:6px 14px;
+    border-radius:7px;cursor:pointer;font-size:12px;font-weight:600}
+  .entering-banner button:hover{background:rgba(255,255,255,.3)}
+</style>
+</head>
+<body>
+
+<div id="loginGate">
+  <div class="login-card">
+    <div class="login-logo">
+      <span class="logo-mark">⚡ RHE Platform</span>
+      <span class="platform-badge">PLATFORM OWNER</span>
+    </div>
+    <div class="login-err" id="li_err"></div>
+    <button class="btn btn-google" id="li_btn" onclick="doGoogleLogin()">
+      <svg width="18" height="18" viewBox="0 0 48 48" style="margin-right:10px;vertical-align:middle"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+      Sign in with Google
+    </button>
+    <div id="li_loading" style="display:none;text-align:center;margin-top:16px;color:var(--muted);font-size:13px">
+      <div class="spinner" style="width:24px;height:24px;border-width:3px;margin:0 auto 8px"></div>
+      Completing sign in…
+    </div>
+  </div>
+</div>
+
+<div id="platformApp" style="display:none">
+
+  <!-- Entering-org context banner (hidden when not inside an org) -->
+  <div id="enteringBanner" class="entering-banner" style="display:none">
+    <span>📂 Viewing org:</span>
+    <strong id="enteringOrgName"></strong>
+    <span id="enteringOrgMeta" style="opacity:.7"></span>
+    <button onclick="exitOrg()">✕ Exit Org</button>
+  </div>
+
+  <header>
+    <div>
+      <div class="logo-mark">⚡ RHE Platform</div>
+    </div>
+    <span class="platform-badge">PLATFORM OWNER</span>
+    <div class="hdr-right">
+      <span class="hdr-user" id="platformUserEmail"></span>
+      <button class="lnk" onclick="window.location.href='admin.html'">🔧 Admin</button>
+      <button class="lnk" onclick="window.location.href='PricingEstimator.html'">📋 Estimator</button>
+      <button class="lnk" onclick="handleLogout()">Sign Out</button>
+    </div>
+  </header>
+
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="showTab('orgs')"    id="tab-btn-orgs">🏢 Organizations</button>
+    <button class="tab-btn"        onclick="showTab('users')"   id="tab-btn-users">👥 All Users</button>
+    <button class="tab-btn"        onclick="showTab('orgDesign')" id="tab-btn-orgDesign" style="display:none">🎨 Org Design</button>
+    <button class="tab-btn"        onclick="showTab('orgUsers')" id="tab-btn-orgUsers"   style="display:none">👤 Org Users</button>
+  </div>
+
+  <!-- ═══ ORGS TAB ═══════════════════════════════════════════════ -->
+  <div id="tab-orgs" class="tab-panel active">
+    <div class="stats-strip">
+      <div class="stat-card"><div class="stat-val" id="statOrgs">—</div><div class="stat-lbl">Organizations</div></div>
+      <div class="stat-card"><div class="stat-val" id="statUsers">—</div><div class="stat-lbl">Total Users</div></div>
+      <div class="stat-card"><div class="stat-val" id="statActive">—</div><div class="stat-lbl">Active Orgs</div></div>
+      <div class="stat-card"><div class="stat-val" id="statQuotes">—</div><div class="stat-lbl">Total Quotes</div></div>
+    </div>
+    <div class="toolbar">
+      <h2>Organizations</h2>
+      <input type="text" id="orgSearch" placeholder="🔍 Search orgs…" style="width:220px"
+        oninput="renderOrgs()">
+      <button class="btn btn-accent" onclick="openCreateOrg()">+ New Organization</button>
+    </div>
+    <div id="orgsGrid" class="org-grid">
+      <div style="padding:20px;color:#999">Loading…</div>
+    </div>
+  </div>
+
+  <!-- ═══ ALL USERS TAB ════════════════════════════════════════════ -->
+  <div id="tab-users" class="tab-panel">
+    <div class="toolbar">
+      <h2>All Users</h2>
+      <input type="text" id="userSearch" placeholder="🔍 Search users…" style="width:220px"
+        oninput="renderAllUsers()">
+      <select id="userRoleFilter" onchange="renderAllUsers()" style="width:160px">
+        <option value="">All Roles</option>
+        <option value="platform_owner">Platform Owner</option>
+        <option value="super_admin">Super Admin</option>
+        <option value="admin">Admin</option>
+        <option value="director">Director of Sales</option>
+        <option value="user">User</option>
+      </select>
+      <select id="userOrgFilter" onchange="renderAllUsers()" style="width:180px">
+        <option value="">All Orgs</option>
+      </select>
+      <button class="btn btn-accent" onclick="openInviteUser()">+ Invite User</button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>Name</th><th>Email</th><th>Role</th><th>Org</th><th>Status</th><th>Joined</th><th>Actions</th>
+        </tr></thead>
+        <tbody id="allUsersBody"><tr><td colspan="7" style="text-align:center;padding:20px;color:#999">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══ ORG DESIGN TAB (shown when inside an org) ════════════════ -->
+  <div id="tab-orgDesign" class="tab-panel">
+    <div class="toolbar">
+      <h2 id="orgDesignTitle">Org Design</h2>
+      <button class="btn btn-primary" onclick="saveOrgDesign()">💾 Save Design</button>
+    </div>
+    <div class="design-panel">
+      <div class="card">
+        <h3>Branding</h3>
+        <label>Company Name</label>
+        <input type="text" id="d_name" placeholder="Renew Home Exteriors">
+        <label>Tagline</label>
+        <input type="text" id="d_tagline" placeholder="Roofing · Siding · Windows · Doors">
+        <label>Phone</label>
+        <input type="tel" id="d_phone" placeholder="(330) 208-9366">
+        <label>Email</label>
+        <input type="email" id="d_email" placeholder="info@company.com">
+        <label>Address</label>
+        <input type="text" id="d_address" placeholder="1361 Wooster Rd W, Barberton, OH 44203">
+        <label>Website</label>
+        <input type="url" id="d_website" placeholder="https://renewhomeexteriors.com">
+        <label>Logo URL</label>
+        <input type="url" id="d_logo" placeholder="https://…/logo.png" oninput="previewLogo()">
+        <div id="logoPreview" style="margin-top:10px;display:none">
+          <img id="logoPreviewImg" style="max-height:60px;border-radius:6px;border:1px solid var(--border)">
+        </div>
+      </div>
+      <div class="card">
+        <h3>Colors &amp; Style</h3>
+        <label>Primary Color</label>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="color" id="d_colorPrimary" value="#1a3a5c" style="width:48px;height:36px;padding:2px;border-radius:6px;cursor:pointer">
+          <input type="text" id="d_colorPrimaryHex" value="#1a3a5c" placeholder="#1a3a5c" style="flex:1" oninput="syncColor('primary')">
+        </div>
+        <label>Accent Color</label>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="color" id="d_colorAccent" value="#e8500a" style="width:48px;height:36px;padding:2px;border-radius:6px;cursor:pointer">
+          <input type="text" id="d_colorAccentHex" value="#e8500a" placeholder="#e8500a" style="flex:1" oninput="syncColor('accent')">
+        </div>
+        <label style="margin-top:20px">Contractor License #</label>
+        <input type="text" id="d_license" placeholder="HIC.0000000">
+        <label>Insurance / Liability Info</label>
+        <textarea id="d_insurance" placeholder="Carrier, policy #, coverage amount…" style="height:80px"></textarea>
+        <label>Slug (URL identifier)</label>
+        <input type="text" id="d_slug" placeholder="renew-home-ext">
+        <label>Domain</label>
+        <input type="url" id="d_domain" placeholder="https://app.renewhomeexteriors.com">
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ ORG USERS TAB (shown when inside an org) ════════════════ -->
+  <div id="tab-orgUsers" class="tab-panel">
+    <div class="toolbar">
+      <h2 id="orgUsersTitle">Org Users</h2>
+      <button class="btn btn-accent" onclick="openInviteUser()">+ Invite User</button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Status</th><th>Actions</th>
+        </tr></thead>
+        <tbody id="orgUsersBody"><tr><td colspan="6" style="text-align:center;padding:20px;color:#999">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /platformApp -->
+
+<!-- ═══ MODAL: CREATE ORG ════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="createOrgModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>New Organization</h3>
+      <button class="modal-close" onclick="closeModal('createOrgModal')">×</button>
+    </div>
+    <label>Company Name *</label>
+    <input type="text" id="co_name" placeholder="Renew Home Exteriors" oninput="autoSlug()">
+    <label>Slug (URL key) *</label>
+    <input type="text" id="co_slug" placeholder="renew-home-ext">
+    <div class="form-row">
+      <div>
+        <label>Phone</label>
+        <input type="tel" id="co_phone" placeholder="(330) 208-9366">
+      </div>
+      <div>
+        <label>Domain</label>
+        <input type="text" id="co_domain" placeholder="renewhomeexteriors.com">
+      </div>
+    </div>
+    <label>Address</label>
+    <input type="text" id="co_address" placeholder="1361 Wooster Rd W, Barberton, OH 44203">
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('createOrgModal')">Cancel</button>
+      <button class="btn btn-accent" onclick="createOrg()">Create Organization</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: INVITE USER ════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="inviteUserModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Invite User</h3>
+      <button class="modal-close" onclick="closeModal('inviteUserModal')">×</button>
+    </div>
+    <div id="inviteOrgNote" style="background:#eef4ff;border:1px solid #b8d4f0;border-radius:8px;
+      padding:10px 14px;font-size:12px;color:var(--primary);margin-bottom:14px"></div>
+    <div id="inv_orgRow" style="display:none">
+      <label>Organization *</label>
+      <select id="inv_tenant">
+        <option value="">— select org —</option>
+      </select>
+    </div>
+    <label>Full Name *</label>
+    <input type="text" id="inv_name" placeholder="Jane Smith">
+    <label>Email Address *</label>
+    <input type="email" id="inv_email" placeholder="jane@example.com">
+    <label>Phone</label>
+    <input type="tel" id="inv_phone" placeholder="(330) 555-0100">
+    <label>Role *</label>
+    <select id="inv_role">
+      <option value="user">User — basic access, own quotes only</option>
+      <option value="director">Director of Sales — all quotes, reports, margins</option>
+      <option value="admin">Admin — full platform access + user management</option>
+      <option value="super_admin">Super Admin — all features</option>
+    </select>
+    <div id="inviteAlert" style="display:none;margin-top:12px;padding:10px;border-radius:7px;font-size:12px"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('inviteUserModal')">Cancel</button>
+      <button class="btn btn-accent" id="inviteBtn" onclick="inviteUser()">Send Invite</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: EDIT USER ROLE ════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="editUserModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Edit User</h3>
+      <button class="modal-close" onclick="closeModal('editUserModal')">×</button>
+    </div>
+    <input type="hidden" id="eu_id">
+    <label>Name</label>
+    <input type="text" id="eu_name">
+    <label>Role</label>
+    <select id="eu_role">
+      <option value="user">User</option>
+      <option value="director">Director of Sales</option>
+      <option value="admin">Admin</option>
+      <option value="super_admin">Super Admin</option>
+    </select>
+    <label>Status</label>
+    <select id="eu_active">
+      <option value="true">Active</option>
+      <option value="false">Inactive</option>
+    </select>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('editUserModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditUser()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const SUPABASE_URL     = 'https://chnkkcdstxtfnoqelwgz.supabase.co';
+const SUPABASE_ANON    = 'sb_publishable_cQ1hnPv5r5N6gmJq8CLmMw_rP_RNiSA';
+const PLATFORM_EMAIL   = 'eganfamily12@gmail.com';
+const TENANT_ID        = '5249f9c0-9fca-46c8-896c-4e35be437024';
+
+const STORAGE_KEY = 'pe_platform_session'; // our key — Supabase client never touches it
+
+// persistSession:false → client NEVER reads/writes localStorage → no internal getUser() on init
+const _supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
+  auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: true }
+});
+let currentSession = null;
+let allOrgs        = [];
+let allUsers       = [];
+let activeOrgId    = null;  // when "entered" an org
+let activeOrgData  = null;
+let quoteCounts    = {};    // { tenant_id: quoteCount }
+let totalQuotes    = null;  // global quote total (null until loaded)
+
+// ═══ RAW REST HELPER ════════════════════════════════════════════════
+async function sbFetch(path, { method = 'GET', body, prefer } = {}) {
+  const makeReq = () => {
+    const hdrs = {
+      'apikey':        SUPABASE_ANON,
+      'Authorization': 'Bearer ' + (currentSession?.access_token || ''),
+      'Content-Type':  'application/json',
+    };
+    if (prefer) hdrs['Prefer'] = prefer;
+    return fetch(SUPABASE_URL + '/rest/v1/' + path, {
+      method, headers: hdrs,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  };
+  let r = await makeReq();
+  // If token expired, try silent refresh then retry once
+  if (r.status === 401) {
+    const ok = await tryRefreshToken();
+    if (ok) r = await makeReq();
+  }
+  if (!r.ok) { const t = await r.text(); throw new Error(t); }
+  const t = await r.text();
+  return t ? JSON.parse(t) : null;
+}
+
+// Tenant writes go through an edge function to work around PostgREST ES256 JWT limitation
+async function tenantFn(operation, data, id) {
+  const r = await fetch(SUPABASE_URL + '/functions/v1/manage-tenant', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + (currentSession?.access_token || ''),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ operation, data, id }),
+  });
+  const json = await r.json();
+  if (!r.ok) throw new Error(json?.error || r.statusText);
+  return json;
+}
+
+async function tryRefreshToken() {
+  if (!currentSession?.refresh_token) return false;
+  try {
+    const r = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: currentSession.refresh_token }),
+    });
+    if (!r.ok) return false;
+    const s = await r.json();
+    currentSession = s;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+    return true;
+  } catch { return false; }
+}
+
+// ═══ INIT ═══════════════════════════════════════════════════════════
+(async () => {
+  // Read our own key — Supabase client never touches it, so no internal getUser/logout
+  const stored = (() => {
+    try { const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : null; }
+    catch { return null; }
+  })();
+
+  if (stored?.access_token && stored?.user?.email &&
+      stored.user.email.toLowerCase() === PLATFORM_EMAIL.toLowerCase()) {
+    const now = Math.floor(Date.now() / 1000);
+    const exp = stored.expires_at || 0;
+    if (exp > now + 60) {
+      currentSession = stored;
+      showPlatform();
+      return;
+    }
+    // Token expiring soon — try silent refresh
+    currentSession = stored;
+    const ok = await tryRefreshToken();
+    if (ok) { showPlatform(); return; }
+  }
+  showLogin();
+})();
+
+function showLogin() {
+  document.getElementById('loginGate').style.display = 'flex';
+  document.getElementById('platformApp').style.display = 'none';
+}
+
+function showPlatform() {
+  document.getElementById('loginGate').style.display = 'none';
+  document.getElementById('platformApp').style.display = 'block';
+  document.getElementById('platformUserEmail').textContent = currentSession.user.email;
+  loadAll();
+}
+
+// OAuth callback — fires when Google redirects back after auth
+_supa.auth.onAuthStateChange((event, session) => {
+  if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
+    if (session.user?.email?.toLowerCase() !== PLATFORM_EMAIL.toLowerCase()) {
+      document.getElementById('li_err').textContent = 'Access denied — wrong Google account.';
+      document.getElementById('li_loading').style.display = 'none';
+      document.getElementById('li_btn').style.display = '';
+      _supa.auth.signOut();
+      return;
+    }
+    currentSession = session;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    window.history.replaceState({}, '', window.location.pathname);
+    showPlatform();
+  }
+});
+
+async function doGoogleLogin() {
+  document.getElementById('li_err').textContent = '';
+  document.getElementById('li_btn').style.display = 'none';
+  document.getElementById('li_loading').style.display = 'block';
+  try {
+    const redirectTo = window.location.origin + window.location.pathname;
+    const { error } = await _supa.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo }
+    });
+    if (error) {
+      document.getElementById('li_err').textContent = error.message;
+      document.getElementById('li_btn').style.display = '';
+      document.getElementById('li_loading').style.display = 'none';
+    }
+    // On success: browser navigates to Google, then back; onAuthStateChange handles the rest
+  } catch(e) {
+    document.getElementById('li_err').textContent = 'Error: ' + e.message;
+    document.getElementById('li_btn').style.display = '';
+    document.getElementById('li_loading').style.display = 'none';
+  }
+}
+
+async function handleLogout() {
+  localStorage.removeItem(STORAGE_KEY);
+  try { await _supa.auth.signOut(); } catch {}
+  showLogin();
+}
+
+// ═══ DATA LOADING ═══════════════════════════════════════════════════
+async function loadAll() {
+  await Promise.all([loadOrgs(), loadAllUsers(), loadStats()]);
+  updateStats();
+  renderOrgs();
+}
+
+async function loadStats() {
+  try {
+    const data = await tenantFn('tenant_stats');
+    quoteCounts = data?.quotes || {};
+    totalQuotes = typeof data?.total === 'number' ? data.total : null;
+  } catch(e) {
+    // Non-fatal: leave counts blank rather than blocking the console
+    console.error('[platform] tenant_stats failed:', e.message);
+    quoteCounts = {};
+    totalQuotes = null;
+  }
+}
+
+// User count per tenant, derived from the already-loaded users list
+function userCountFor(tenantId) {
+  return allUsers.filter(u => u.tenant_id === tenantId).length;
+}
+
+async function loadOrgs() {
+  try {
+    const data = await tenantFn('list_tenants');
+    allOrgs = Array.isArray(data) ? data : [];
+    renderOrgs();
+  } catch(e) { toast('Failed to load orgs: ' + e.message, true); }
+}
+
+async function loadAllUsers() {
+  try {
+    const data = await tenantFn('list_all_users');
+    allUsers = Array.isArray(data) ? data : [];
+    renderAllUsers();
+  } catch(e) { toast('Failed to load users: ' + e.message, true); }
+}
+
+function updateStats() {
+  document.getElementById('statOrgs').textContent   = allOrgs.length;
+  document.getElementById('statUsers').textContent  = allUsers.length;
+  document.getElementById('statActive').textContent = allOrgs.filter(o => o.active !== false).length;
+  document.getElementById('statQuotes').textContent = totalQuotes === null ? '—' : totalQuotes;
+}
+
+// ═══ TABS ════════════════════════════════════════════════════════════
+function showTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  document.getElementById('tab-btn-'+name).classList.add('active');
+}
+
+// ═══ ORGS RENDER ═════════════════════════════════════════════════════
+function renderOrgs() {
+  const q   = (document.getElementById('orgSearch').value||'').toLowerCase();
+  const orgs = allOrgs.filter(o => !q || o.name?.toLowerCase().includes(q) || o.slug?.toLowerCase().includes(q));
+  const grid = document.getElementById('orgsGrid');
+  if (!orgs.length) { grid.innerHTML = '<div style="padding:20px;color:#999">No organizations found</div>'; return; }
+  grid.innerHTML = orgs.map(o => `
+    <div class="org-card">
+      <div class="org-logo">
+        ${o.logo_url ? `<img src="${h(o.logo_url)}" alt="${h(o.name)}">` : h((o.name||'?')[0].toUpperCase())}
+      </div>
+      <div class="org-name">${h(o.name||'Unnamed')}</div>
+      <div class="org-slug">${h(o.slug||'')}</div>
+      <div class="org-meta">
+        ${o.phone ? `📞 ${h(o.phone)}<br>` : ''}
+        ${o.address ? `📍 ${h(o.address)}<br>` : ''}
+        ${o.domain ? `🌐 ${h(o.domain)}` : ''}
+      </div>
+      <div class="org-metrics" style="display:flex;gap:16px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+        <div><span style="font-size:18px;font-weight:800;color:var(--primary)">${userCountFor(o.id)}</span>
+          <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-left:3px">Users</span></div>
+        <div><span style="font-size:18px;font-weight:800;color:var(--primary)">${quoteCounts[o.id] ?? '—'}</span>
+          <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-left:3px">Quotes</span></div>
+      </div>
+      <div style="margin-top:10px">
+        <span class="badge ${o.active === false ? 'badge-inactive' : 'badge-active'}">
+          ${o.active === false ? 'Inactive' : 'Active'}
+        </span>
+      </div>
+      <div class="org-actions">
+        <button class="btn btn-primary btn-sm" onclick="enterOrg('${o.id}')">🔑 Enter Org</button>
+        <button class="btn btn-ghost btn-sm"   onclick="openEditOrgDesign('${o.id}')">🎨 Design</button>
+        <button class="btn btn-ghost btn-sm"   onclick="toggleOrgActive('${o.id}',${o.active !== false})">${o.active === false ? '✅ Activate' : '⏸ Deactivate'}</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ═══ ALL USERS RENDER ════════════════════════════════════════════════
+function renderAllUsers() {
+  const q      = (document.getElementById('userSearch').value||'').toLowerCase();
+  const roleF  = document.getElementById('userRoleFilter').value;
+  const orgF   = document.getElementById('userOrgFilter').value;
+  const orgMap = {};
+  allOrgs.forEach(o => { orgMap[o.id] = o.name; });
+  // Rebuild org filter options (keep current selection)
+  const orgSel = document.getElementById('userOrgFilter');
+  const prevOrg = orgSel.value;
+  orgSel.innerHTML = '<option value="">All Orgs</option>' +
+    allOrgs.map(o => `<option value="${o.id}" ${o.id===prevOrg?'selected':''}>${h(o.name)}</option>`).join('');
+  const users = allUsers.filter(u =>
+    (!roleF || u.role === roleF) &&
+    (!orgF  || u.tenant_id === orgF) &&
+    (!q || u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q))
+  );
+  const tbody = document.getElementById('allUsersBody');
+  if (!users.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:#999">No users found</td></tr>'; return; }
+  tbody.innerHTML = users.map(u => `
+    <tr>
+      <td><strong>${h(u.name||'—')}</strong></td>
+      <td style="color:var(--muted)">${h(u.email)}</td>
+      <td><span class="badge badge-${u.role||'user'}">${roleLabel(u.role)}</span></td>
+      <td style="font-size:12px;color:var(--muted)">${h(orgMap[u.tenant_id]||u.tenant_id?.slice(0,8)||'—')}</td>
+      <td><span class="badge ${u.active === false ? 'badge-inactive':'badge-active'}">${u.active === false ? 'Inactive':'Active'}</span></td>
+      <td style="font-size:11px;color:var(--muted)">${u.created_at ? new Date(u.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—'}</td>
+      <td>
+        <button class="btn btn-ghost btn-sm" onclick="openEditUser('${u.id}')">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deactivateUser('${u.id}',${u.active !== false})">${u.active===false?'Activate':'Deactivate'}</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// ═══ ENTER ORG ═══════════════════════════════════════════════════════
+function enterOrg(orgId) {
+  activeOrgId   = orgId;
+  activeOrgData = allOrgs.find(o => o.id === orgId) || {};
+  document.getElementById('enteringBanner').style.display = 'flex';
+  document.getElementById('enteringOrgName').textContent  = activeOrgData.name || orgId;
+  document.getElementById('enteringOrgMeta').textContent  = activeOrgData.slug ? `(${activeOrgData.slug})` : '';
+  // Show org-specific tabs
+  document.getElementById('tab-btn-orgDesign').style.display = '';
+  document.getElementById('tab-btn-orgUsers').style.display  = '';
+  document.getElementById('orgDesignTitle').textContent = activeOrgData.name + ' — Design';
+  document.getElementById('orgUsersTitle').textContent  = activeOrgData.name + ' — Users';
+  // Populate design fields
+  populateDesignForm(activeOrgData);
+  // Load org users
+  loadOrgUsers();
+  showTab('orgDesign');
+}
+
+function exitOrg() {
+  activeOrgId   = null;
+  activeOrgData = null;
+  document.getElementById('enteringBanner').style.display = 'none';
+  document.getElementById('tab-btn-orgDesign').style.display = 'none';
+  document.getElementById('tab-btn-orgUsers').style.display  = 'none';
+  showTab('orgs');
+}
+
+function openEditOrgDesign(orgId) { enterOrg(orgId); showTab('orgDesign'); }
+
+// ═══ ORG DESIGN ══════════════════════════════════════════════════════
+function populateDesignForm(org) {
+  const s = org.settings || {};
+  document.getElementById('d_name').value        = org.name || '';
+  document.getElementById('d_tagline').value     = s.tagline || '';
+  document.getElementById('d_phone').value       = org.phone || '';
+  document.getElementById('d_email').value       = s.email || '';
+  document.getElementById('d_address').value     = org.address || '';
+  document.getElementById('d_website').value     = s.website || '';
+  document.getElementById('d_logo').value        = org.logo_url || '';
+  document.getElementById('d_colorPrimary').value      = s.color_primary || '#1a3a5c';
+  document.getElementById('d_colorPrimaryHex').value   = s.color_primary || '#1a3a5c';
+  document.getElementById('d_colorAccent').value       = s.color_accent  || '#e8500a';
+  document.getElementById('d_colorAccentHex').value    = s.color_accent  || '#e8500a';
+  document.getElementById('d_license').value    = s.license || '';
+  document.getElementById('d_insurance').value  = s.insurance || '';
+  document.getElementById('d_slug').value       = org.slug || '';
+  document.getElementById('d_domain').value     = org.domain || '';
+  previewLogo();
+}
+
+function previewLogo() {
+  const url = document.getElementById('d_logo').value.trim();
+  const prev = document.getElementById('logoPreview');
+  const img  = document.getElementById('logoPreviewImg');
+  if (url) { img.src = url; prev.style.display = 'block'; }
+  else { prev.style.display = 'none'; }
+}
+
+function syncColor(which) {
+  const hex = document.getElementById('d_color' + (which==='primary'?'PrimaryHex':'AccentHex')).value.trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
+    document.getElementById('d_color' + (which==='primary'?'Primary':'Accent')).value = hex;
+  }
+}
+
+async function saveOrgDesign() {
+  if (!activeOrgId) return;
+  const payload = {
+    name:     document.getElementById('d_name').value.trim(),
+    phone:    document.getElementById('d_phone').value.trim(),
+    address:  document.getElementById('d_address').value.trim(),
+    logo_url: document.getElementById('d_logo').value.trim(),
+    slug:     document.getElementById('d_slug').value.trim(),
+    domain:   document.getElementById('d_domain').value.trim(),
+    settings: {
+      tagline:       document.getElementById('d_tagline').value.trim(),
+      email:         document.getElementById('d_email').value.trim(),
+      website:       document.getElementById('d_website').value.trim(),
+      color_primary: document.getElementById('d_colorPrimary').value,
+      color_accent:  document.getElementById('d_colorAccent').value,
+      license:       document.getElementById('d_license').value.trim(),
+      insurance:     document.getElementById('d_insurance').value.trim(),
+    }
+  };
+  try {
+    await tenantFn('update', payload, activeOrgId);
+  } catch(e) { toast('Save failed — ' + e.message, true); return; }
+  toast('Design saved');
+  const idx = allOrgs.findIndex(o => o.id === activeOrgId);
+  if (idx >= 0) allOrgs[idx] = { ...allOrgs[idx], ...payload };
+  activeOrgData = allOrgs[idx];
+}
+
+// ═══ ORG USERS ═══════════════════════════════════════════════════════
+async function loadOrgUsers() {
+  if (!activeOrgId) return;
+  let users;
+  try { users = await tenantFn('list_org_users', null, activeOrgId) || []; }
+  catch(e) { toast('Failed to load org users: ' + e.message, true); return; }
+  const tbody = document.getElementById('orgUsersBody');
+  if (!users.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#999">No users in this org yet</td></tr>';
+    return;
+  }
+  tbody.innerHTML = users.map(u => `
+    <tr>
+      <td><strong>${h(u.name||'—')}</strong></td>
+      <td style="color:var(--muted)">${h(u.email)}</td>
+      <td style="color:var(--muted)">${h(u.phone||'—')}</td>
+      <td><span class="badge badge-${u.role||'user'}">${roleLabel(u.role)}</span></td>
+      <td><span class="badge ${u.active===false?'badge-inactive':'badge-active'}">${u.active===false?'Inactive':'Active'}</span></td>
+      <td>
+        <button class="btn btn-ghost btn-sm" onclick="openEditUser('${u.id}')">Edit Role</button>
+        <button class="btn btn-danger btn-sm" onclick="deactivateUser('${u.id}',${u.active!==false})">${u.active===false?'Activate':'Deactivate'}</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// ═══ CREATE ORG ═══════════════════════════════════════════════════════
+function openCreateOrg() {
+  ['co_name','co_slug','co_phone','co_domain','co_address'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  openModal('createOrgModal');
+}
+
+function autoSlug() {
+  // Only auto-fill slug if user hasn't manually edited it
+  const slugEl = document.getElementById('co_slug');
+  const autoVal = document.getElementById('co_name').value
+    .toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+  slugEl.value = autoVal;
+}
+
+async function createOrg() {
+  const name = document.getElementById('co_name').value.trim();
+  const slug = document.getElementById('co_slug').value.trim();
+  if (!name || !slug) { toast('Name and slug required', true); return; }
+  const payload = {
+    name, slug,
+    phone:    document.getElementById('co_phone').value.trim() || null,
+    domain:   document.getElementById('co_domain').value.trim() || null,
+    address:  document.getElementById('co_address').value.trim() || null,
+    active:   true,
+    settings: {}
+  };
+  let newOrg;
+  try {
+    newOrg = await tenantFn('create', payload);
+  } catch(e) { toast('Failed: ' + e.message, true); return; }
+  allOrgs.push(newOrg);
+  renderOrgs();
+  updateStats();
+  closeModal('createOrgModal');
+  toast('Organization created');
+  enterOrg(newOrg.id);
+}
+
+// ═══ INVITE USER ══════════════════════════════════════════════════════
+function openInviteUser() {
+  ['inv_name','inv_email','inv_phone'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('inv_role').value = 'user';
+  document.getElementById('inviteAlert').style.display = 'none';
+  document.getElementById('inviteBtn').disabled = false;
+  document.getElementById('inviteBtn').textContent = 'Send Invite';
+  if (activeOrgId) {
+    // Inside an org — lock to that org
+    document.getElementById('inv_orgRow').style.display = 'none';
+    document.getElementById('inviteOrgNote').textContent = '📂 Inviting to: ' + (activeOrgData?.name || activeOrgId);
+  } else {
+    // All Users tab — show org picker
+    document.getElementById('inv_orgRow').style.display = 'block';
+    document.getElementById('inviteOrgNote').textContent = '📂 Select the organization this user belongs to';
+    const sel = document.getElementById('inv_tenant');
+    sel.innerHTML = '<option value="">— select org —</option>' +
+      allOrgs.map(o => `<option value="${o.id}">${h(o.name)}</option>`).join('');
+  }
+  openModal('inviteUserModal');
+}
+
+async function inviteUser() {
+  const name  = document.getElementById('inv_name').value.trim();
+  const email = document.getElementById('inv_email').value.trim();
+  const phone = document.getElementById('inv_phone').value.trim();
+  const role  = document.getElementById('inv_role').value;
+  const tenantId = activeOrgId || document.getElementById('inv_tenant').value || TENANT_ID;
+  if (!name || !email) { showInviteAlert('Name and email required', true); return; }
+  if (!activeOrgId && !document.getElementById('inv_tenant').value) {
+    showInviteAlert('Please select an organization', true); return;
+  }
+  const btn = document.getElementById('inviteBtn');
+  btn.disabled = true; btn.textContent = 'Sending invite…';
+  try {
+    const r = await fetch(SUPABASE_URL + '/functions/v1/invite-user', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + currentSession.access_token,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ name, email, phone: phone||null, role, tenant_id: tenantId })
+    });
+    const data = await r.json();
+    btn.disabled = false; btn.textContent = 'Send Invite';
+    if (r.ok && data.success) {
+      if (data.user) allUsers.push(data.user);
+      renderAllUsers();
+      if (activeOrgId) loadOrgUsers();
+      closeModal('inviteUserModal');
+      toast('✉️ Invite sent to ' + email);
+    } else {
+      showInviteAlert('Failed: ' + (data.error || r.status), true);
+    }
+  } catch (e) {
+    btn.disabled = false; btn.textContent = 'Send Invite';
+    showInviteAlert('Network error: ' + e.message, true);
+  }
+}
+
+function showInviteAlert(msg, isErr) {
+  const el = document.getElementById('inviteAlert');
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.style.background = isErr ? '#fff0f0' : '#f0fff4';
+  el.style.color      = isErr ? '#c0392b' : '#155724';
+  el.style.border     = `1px solid ${isErr ? '#f5c6cb' : '#c3e6cb'}`;
+}
+
+// ═══ EDIT USER ════════════════════════════════════════════════════════
+function openEditUser(userId) {
+  const u = allUsers.find(x => x.id === userId);
+  if (!u) return;
+  document.getElementById('eu_id').value     = u.id;
+  document.getElementById('eu_name').value   = u.name || '';
+  document.getElementById('eu_role').value   = u.role || 'user';
+  document.getElementById('eu_active').value = String(u.active !== false);
+  openModal('editUserModal');
+}
+
+async function saveEditUser() {
+  const id     = document.getElementById('eu_id').value;
+  const name   = document.getElementById('eu_name').value.trim();
+  const role   = document.getElementById('eu_role').value;
+  const active = document.getElementById('eu_active').value === 'true';
+  let updated;
+  try {
+    updated = await tenantFn('update_user', { name, role, active }, id);
+  } catch(e) { toast('Update failed: ' + e.message, true); return; }
+  const idx = allUsers.findIndex(u => u.id === id);
+  if (idx >= 0) allUsers[idx] = updated;
+  renderAllUsers();
+  loadOrgUsers();
+  closeModal('editUserModal');
+  toast('User updated');
+}
+
+// ═══ DEACTIVATE USER ══════════════════════════════════════════════════
+async function deactivateUser(userId, currentlyActive) {
+  if (!confirm((currentlyActive ? 'Deactivate' : 'Activate') + ' this user?')) return;
+  try { await tenantFn('update_user', { active: !currentlyActive }, userId); }
+  catch(e) { toast('Failed: ' + e.message, true); return; }
+  const idx = allUsers.findIndex(u => u.id === userId);
+  if (idx >= 0) allUsers[idx].active = !currentlyActive;
+  renderAllUsers();
+  loadOrgUsers();
+  toast('User ' + (currentlyActive ? 'deactivated' : 'activated'));
+}
+
+// ═══ TOGGLE ORG ACTIVE ════════════════════════════════════════════════
+async function toggleOrgActive(orgId, currentlyActive) {
+  if (!confirm((currentlyActive ? 'Deactivate' : 'Activate') + ' this org?')) return;
+  try { await tenantFn('update', { active: !currentlyActive }, orgId); }
+  catch(e) { toast('Failed: ' + e.message, true); return; }
+  const idx = allOrgs.findIndex(o => o.id === orgId);
+  if (idx >= 0) allOrgs[idx].active = !currentlyActive;
+  renderOrgs();
+  updateStats();
+  toast('Org ' + (currentlyActive ? 'deactivated' : 'activated'));
+}
+
+// ═══ HELPERS ══════════════════════════════════════════════════════════
+function openModal(id)  { document.getElementById(id).classList.remove('hidden'); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+function h(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function roleLabel(r) {
+  return {platform_owner:'Platform Owner',super_admin:'Super Admin',
+          admin:'Admin',director:'Director',user:'User',rep:'Rep'}[r] || r || 'User';
+}
+
+function toast(msg, isError=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'show' + (isError?' error':'');
+  clearTimeout(t._t); t._t = setTimeout(()=>{ t.className=''; }, 3200);
+}
+</script>
+</body>
+</html>

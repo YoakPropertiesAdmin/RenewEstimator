@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sign Your Document – Renew Home Exteriors</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,Helvetica,sans-serif;background:#e8ecf0;color:#1e2a38;font-size:14px}
+
+/* Top bar */
+.top-bar{background:#1a3a5c;color:#fff;padding:14px 24px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:200}
+.top-logo{font-size:16px;font-weight:900}
+.top-badge{background:#e67e22;color:#fff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px}
+
+/* Progress tracker */
+#progress-bar{display:none;background:#fff;border-bottom:2px solid #e0e4e8;padding:10px 20px;position:sticky;top:56px;z-index:190;font-size:12px}
+.prog-inner{display:flex;align-items:center;gap:10px;flex-wrap:wrap;max-width:900px;margin:0 auto}
+.prog-label{font-weight:700;color:#1a3a5c;white-space:nowrap}
+.prog-chips{display:flex;gap:6px;flex-wrap:wrap;flex:1}
+.prog-chip{font-size:11px;padding:3px 9px;border-radius:20px;border:1px solid #ddd;background:#f5f5f5;color:#888;white-space:nowrap;cursor:pointer;transition:all .15s}
+.prog-chip.done{background:#e8f5e9;border-color:#66bb6a;color:#2e7d32}
+.prog-count{font-weight:700;color:#1a3a5c;white-space:nowrap}
+
+/* Banner */
+#banner{display:none;background:#fff3cd;border-bottom:1px solid #ffc107;padding:9px 20px;font-size:12px;color:#5a4000;text-align:center}
+
+/* Document */
+.doc-outer{background:#aaa;padding:16px;display:none}
+#doc-iframe{display:block;width:100%;border:none;min-height:800px;background:#fff}
+@media(max-width:760px){.doc-outer{padding:4px}}
+
+/* Action panel */
+#action-panel{display:none;background:#fff;max-width:700px;margin:24px auto 40px;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.15);overflow:hidden}
+.panel-hdr{background:#1a3a5c;color:#fff;padding:16px 24px}
+.panel-hdr-title{font-size:17px;font-weight:800}
+.panel-hdr-sub{font-size:11px;color:#93b4d0;margin-top:3px}
+.panel-body{padding:24px}
+
+/* Quick-sign box */
+.quick-box{background:#f0f7ff;border:1px solid #90caf9;border-radius:8px;padding:16px;margin-bottom:20px}
+.quick-title{font-size:13px;font-weight:700;color:#1565c0;margin-bottom:10px}
+.sig-tabs{display:flex;border-bottom:2px solid #1a3a5c}
+.sig-tab{background:none;border:none;padding:8px 16px;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:#666;font-weight:600}
+.sig-tab.active{border-bottom-color:#1a3a5c;color:#1a3a5c}
+.canvas-wrap{position:relative;background:#fafafa;border:1px solid #ccc;border-radius:0 6px 6px 6px}
+.sig-canvas{display:block;width:100%;cursor:crosshair;touch-action:none}
+.canvas-hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:13px;color:#bbb;pointer-events:none;user-select:none;text-align:center}
+.clear-btn{position:absolute;top:8px;right:8px;background:#fff;border:1px solid #ddd;border-radius:4px;padding:3px 9px;font-size:11px;cursor:pointer;color:#666}
+.type-panel{display:none;border:1px solid #ccc;border-radius:0 6px 6px 6px;padding:12px;background:#fafafa}
+.type-input{width:100%;font-family:'Brush Script MT',cursive,Arial;font-size:36px;border:none;border-bottom:1px solid #555;padding:8px 0;outline:none;color:#1a3a5c;background:transparent}
+.apply-all-btn{width:100%;margin-top:12px;background:#1565c0;color:#fff;border:none;padding:12px;border-radius:6px;font-size:14px;font-weight:700;cursor:pointer}
+.apply-all-btn:disabled{opacity:.4;cursor:not-allowed}
+.apply-all-btn:not(:disabled):hover{background:#0d47a1}
+
+/* UETA + submit */
+.consent-box{background:#f0f7f0;border:1px solid #81c784;border-radius:6px;padding:14px;margin-bottom:16px}
+.consent-label{display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:12px;line-height:1.6}
+.consent-label input[type=checkbox]{margin-top:2px;min-width:18px;height:18px;cursor:pointer}
+.name-row{margin-bottom:16px}
+.field-label{font-size:12px;font-weight:700;color:#555;margin-bottom:6px;display:block}
+.name-input{width:100%;border:1px solid #ccc;border-radius:4px;padding:10px 12px;font-size:14px;font-weight:600}
+#submit-btn{width:100%;background:#2e7d32;color:#fff;border:none;padding:16px;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:.3px}
+#submit-btn:disabled{opacity:.4;cursor:not-allowed}
+#submit-btn:not(:disabled):hover{background:#1b5e20}
+.err-msg{display:none;border-radius:6px;padding:12px 16px;margin-top:14px;font-size:13px;background:#fdecea;border:1px solid #f44336;color:#c0392b}
+.disclaimer{font-size:11px;color:#999;line-height:1.6;margin-top:14px;text-align:center}
+
+/* ── MODAL ── */
+#sig-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9000;align-items:center;justify-content:center;padding:12px}
+.modal-box{background:#fff;border-radius:12px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.35)}
+.modal-hdr{background:#1a3a5c;color:#fff;padding:14px 18px;border-radius:12px 12px 0 0;display:flex;justify-content:space-between;align-items:center}
+.modal-hdr h3{font-size:15px;font-weight:800;margin:0}
+.modal-hdr small{font-size:11px;color:#93b4d0;display:block;margin-top:2px}
+.modal-close{background:none;border:none;color:#fff;font-size:24px;cursor:pointer;padding:0 0 0 12px;line-height:1}
+.modal-body{padding:18px}
+.modal-tabs{display:flex;border-bottom:2px solid #1a3a5c}
+.modal-tab{background:none;border:none;padding:8px 16px;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:#666;font-weight:600}
+.modal-tab.active{border-bottom-color:#1a3a5c;color:#1a3a5c}
+.modal-actions{display:flex;gap:10px;margin-top:14px}
+.modal-apply{flex:1;background:#2e7d32;color:#fff;border:none;padding:13px;border-radius:6px;font-size:15px;font-weight:700;cursor:pointer}
+.modal-apply:disabled{opacity:.4;cursor:not-allowed}
+.modal-apply:not(:disabled):hover{background:#1b5e20}
+.modal-cancel{background:#f5f5f5;color:#555;border:1px solid #ddd;padding:13px 18px;border-radius:6px;font-size:14px;cursor:pointer}
+
+/* Loading / error / signed screens */
+#loading-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70vh;gap:14px}
+.spinner{width:48px;height:48px;border:5px solid #e0e0e0;border-top-color:#1a3a5c;border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.card-screen{display:none;align-items:center;justify-content:center;min-height:60vh;padding:20px}
+.card{background:#fff;border-radius:10px;padding:36px;max-width:480px;width:100%;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.1)}
+.card h1{color:#c0392b;margin-bottom:12px;font-size:22px}
+.card p{color:#555;line-height:1.7}
+#signed-screen{display:none;padding:20px;max-width:760px;margin:0 auto}
+.cert{background:#fff;border:2px solid #2e7d32;border-radius:10px;padding:26px;margin-bottom:20px;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.cert-title{color:#2e7d32;font-size:19px;font-weight:700;margin-bottom:14px}
+.cert-row{display:flex;gap:12px;margin:7px 0;font-size:13px}
+.cert-label{color:#555;min-width:150px}
+.cert-val{font-weight:600}
+
+/* Submit loading */
+#submit-loading{display:none;position:fixed;inset:0;background:rgba(255,255,255,.85);align-items:center;justify-content:center;flex-direction:column;gap:16px;z-index:9999}
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="top-bar">
+  <div>
+    <div class="top-logo">RENEW HOME EXTERIORS</div>
+    <div style="font-size:11px;color:#93b4d0;margin-top:2px">Electronic Document Signing</div>
+  </div>
+  <div class="top-badge" id="top-badge">SIGNATURE REQUIRED</div>
+</div>
+
+<!-- Progress bar -->
+<div id="progress-bar">
+  <div class="prog-inner">
+    <div class="prog-label">REQUIRED FIELDS:</div>
+    <div class="prog-chips" id="prog-chips"></div>
+    <div class="prog-count" id="prog-count">0 / 0</div>
+  </div>
+</div>
+
+<!-- Banner -->
+<div id="banner"></div>
+
+<!-- Submit loading overlay -->
+<div id="submit-loading">
+  <div class="spinner"></div>
+  <div style="font-size:14px;font-weight:600;color:#1a3a5c">Submitting…</div>
+</div>
+
+<!-- ══════════ MODAL ══════════ -->
+<div id="sig-modal">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <div>
+        <h3 id="modal-title">Sign</h3>
+        <small id="modal-sub"></small>
+      </div>
+      <button class="modal-close" onclick="closeModal()">&#215;</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-tabs">
+        <button class="modal-tab active" id="mtab-draw" onclick="mTab('draw')">&#9998; Draw</button>
+        <button class="modal-tab" id="mtab-type" onclick="mTab('type')">&#9000; Type</button>
+      </div>
+      <!-- Draw panel -->
+      <div id="mdraw-panel">
+        <div class="canvas-wrap">
+          <canvas class="sig-canvas" id="modal-canvas" width="600" height="180"></canvas>
+          <div class="canvas-hint" id="modal-hint">Sign here with mouse or finger</div>
+          <button class="clear-btn" onclick="clearModalCanvas()">Clear</button>
+        </div>
+      </div>
+      <!-- Type panel -->
+      <div id="mtype-panel" class="type-panel">
+        <input class="type-input" id="modal-type-input" placeholder="Type your name" oninput="checkModalReady()">
+      </div>
+      <div class="modal-actions">
+        <button class="modal-apply" id="modal-apply-btn" onclick="applyModal()" disabled>Apply</button>
+        <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loading screen -->
+<div id="loading-screen">
+  <div class="spinner"></div>
+  <div id="loading-msg" style="font-size:14px;font-weight:600;color:#1a3a5c">Loading document&hellip;</div>
+</div>
+
+<!-- Error screen -->
+<div class="card-screen" id="error-screen">
+  <div class="card">
+    <div style="font-size:13px;font-weight:700;color:#1a3a5c;margin-bottom:16px">RENEW HOME EXTERIORS</div>
+    <h1 id="err-title">Error</h1>
+    <p id="err-body"></p>
+    <p style="margin-top:20px;font-size:12px;color:#aaa">Questions? Call (330) 208-9366 or email RHEOhio@gmail.com</p>
+  </div>
+</div>
+
+<!-- Signed screen -->
+<div id="signed-screen">
+  <div class="cert">
+    <div class="cert-title">&#10003; Document Signed</div>
+    <div class="cert-row"><span class="cert-label">Signed by:</span><span class="cert-val" id="sv-name"></span></div>
+    <div class="cert-row"><span class="cert-label">Email:</span><span class="cert-val" id="sv-email"></span></div>
+    <div class="cert-row"><span class="cert-label">Date &amp; Time:</span><span class="cert-val" id="sv-date"></span></div>
+    <div class="cert-row" id="sv-proj-row" style="display:none"><span class="cert-label">Project #:</span><span class="cert-val" id="sv-proj"></span></div>
+    <div class="cert-row" id="sv-total-row" style="display:none"><span class="cert-label">Contract Total:</span><span class="cert-val" id="sv-total"></span></div>
+    <div id="sv-sig-wrap" style="margin-top:12px;display:none">
+      <div style="font-size:12px;color:#555;margin-bottom:6px">Signature on file:</div>
+      <img id="sv-sig" src="" alt="signature" style="height:60px;border:1px solid #ddd;padding:6px;border-radius:4px;background:#fafafa">
+    </div>
+  </div>
+  <div style="text-align:center;margin:16px 0">
+    <button onclick="printSignedDoc()" style="background:#1a3a5c;color:#fff;border:none;padding:10px 22px;border-radius:6px;font-size:14px;cursor:pointer">&#128424; Print / Save PDF</button>
+  </div>
+  <div style="background:#aaa;padding:12px;border-radius:8px">
+    <iframe id="sv-iframe" style="display:block;width:100%;border:none;min-height:900px;background:#fff" title="Signed Document"></iframe>
+  </div>
+</div>
+
+<!-- Document iframe -->
+<div class="doc-outer" id="doc-outer">
+  <iframe id="doc-iframe" title="Contract Document"></iframe>
+</div>
+
+<!-- ══════════ ACTION PANEL ══════════ -->
+<div id="action-panel">
+  <div class="panel-hdr">
+    <div class="panel-hdr-title">&#9998; Complete Your Signing</div>
+    <div class="panel-hdr-sub" id="panel-sub">Fill all required fields above, then submit below.</div>
+  </div>
+  <div class="panel-body">
+
+    <!-- UETA -->
+    <div class="consent-box">
+      <label class="consent-label">
+        <input type="checkbox" id="ueta-cb" onchange="checkSubmitReady()">
+        <span><strong>I consent to use electronic records and signatures</strong> for this transaction as provided by the Uniform Electronic Transactions Act (UETA) and the federal E-SIGN Act. I understand my electronic signature is legally binding and equivalent to a handwritten signature.</span>
+      </label>
+    </div>
+
+    <!-- Name -->
+    <div class="name-row">
+      <label class="field-label" for="signer-name">Confirm your full legal name:</label>
+      <input type="text" class="name-input" id="signer-name" oninput="checkSubmitReady()">
+    </div>
+
+    <button id="submit-btn" onclick="submitSig()" disabled>&#10003; &nbsp;Submit Signed Document</button>
+    <div class="err-msg" id="err-msg"></div>
+
+    <p class="disclaimer">By submitting, you agree to the Terms &amp; Conditions in the document above. Your signature, initials, name, email, IP address, and timestamp are recorded as part of the legally admissible record. UETA &amp; E-SIGN Act compliant.</p>
+  </div>
+</div>
+
+<div style="height:40px"></div>
+
+<script>
+// ─── Config ──────────────────────────────────────────────────
+var SB_URL      = 'https://chnkkcdstxtfnoqelwgz.supabase.co';
+var DATA_URL    = SB_URL + '/functions/v1/signing-page';
+var COMPLETE_URL= SB_URL + '/functions/v1/complete-signing';
+
+// ─── State ───────────────────────────────────────────────────
+var TOKEN        = null;
+var SESSION_DATA = null;
+var REQUIRED     = [];   // [{key, label, type}]
+var FILLED       = {};   // {key: dataUrl}
+var ALSIDE_KEYS   = [];  // keys of comparison tier initials (mutually exclusive: siding OR roof options)
+var ALSIDE_LABELS = {};  // key -> label, used to restore a tier placeholder when the choice is changed
+var ALSIDE_SELECTED = null; // { key, dataUrl } of the currently chosen option (null = none yet)
+
+var modalField   = null;
+var modalTab     = 'draw';
+var modalDirty   = false;
+var modalDrawing = false;
+var modalCtx     = null;
+
+// ─── Init ────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', function() {
+  try {
+    TOKEN = new URLSearchParams(location.search).get('token');
+    if (!TOKEN || TOKEN.length !== 64) {
+      showErr('Invalid Link', 'This signing link is invalid. Please contact Renew Home Exteriors.');
+      return;
+    }
+    // Timeout fallback
+    var t = setTimeout(function() {
+      if (document.getElementById('loading-screen').style.display !== 'none') {
+        document.getElementById('loading-msg').textContent = 'Still loading — check your connection…';
+      }
+    }, 12000);
+    loadSession().then(function() { clearTimeout(t); }).catch(function(e) {
+      clearTimeout(t);
+      showErr('Connection Error', 'Could not load the document. Please try again.');
+    });
+  } catch(e) {
+    showErr('Error', 'An unexpected error occurred. Please refresh the page.');
+  }
+});
+
+// ─── Load session ─────────────────────────────────────────────
+async function loadSession() {
+  var res  = await fetch(DATA_URL + '?token=' + TOKEN + '&data=1');
+  var data = await res.json();
+  if (!res.ok) {
+    showErr(res.status === 410 ? 'Link Expired' : 'Link Not Found', data.error || 'An error occurred.');
+    return;
+  }
+  SESSION_DATA = data;
+  if (data.status === 'signed') {
+    renderSigned(data);
+  } else {
+    renderSigning(data);
+  }
+}
+
+// ─── Render: already signed ───────────────────────────────────
+function renderSigned(d) {
+  hide('loading-screen');
+  g('top-badge').textContent = 'SIGNED';
+  g('top-badge').style.background = '#2e7d32';
+  var s = d.document_summary || {};
+  g('sv-name').textContent  = d.signer_name_typed || d.customer_name;
+  g('sv-email').textContent = d.customer_email;
+  g('sv-date').textContent  = new Date(d.signed_at).toLocaleString('en-US',{dateStyle:'long',timeStyle:'short'});
+  if (s.project_num) { g('sv-proj').textContent = s.project_num; show('sv-proj-row'); }
+  if (s.total)       { g('sv-total').textContent = '$' + Number(s.total).toLocaleString('en-US',{minimumFractionDigits:2}); show('sv-total-row'); }
+  if (d.signature_data) { g('sv-sig').src = d.signature_data; show('sv-sig-wrap'); }
+
+  // Load completed doc (with embedded signatures) into iframe
+  // Fall back to original document_html if completed version not saved yet
+  var docHtml = d.completed_document_html || d.document_html || '';
+  var blob = new Blob([docHtml], {type: 'text/html'});
+  var blobUrl = URL.createObjectURL(blob);
+  var svIframe = g('sv-iframe');
+  svIframe.onload = function() {
+    // Resize iframe to fit full document height
+    try {
+      var h = svIframe.contentDocument.body.scrollHeight;
+      if (h > 200) svIframe.style.minHeight = h + 40 + 'px';
+    } catch(e) {}
+  };
+  svIframe.src = blobUrl;
+  show('signed-screen');
+}
+
+function printSignedDoc() {
+  var svIframe = g('sv-iframe');
+  if (svIframe && svIframe.contentWindow) {
+    svIframe.contentWindow.focus();
+    svIframe.contentWindow.print();
+  } else {
+    window.print();
+  }
+}
+
+// ─── Render: signing page ─────────────────────────────────────
+function renderSigning(d) {
+  hide('loading-screen');
+
+  var s     = d.document_summary || {};
+  var expD  = new Date(d.expires_at).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  g('banner').innerHTML = '&#128203; Scroll through the document, tap each orange field to sign, then complete the panel below. Link expires <strong>' + expD + '</strong>.';
+  show('banner');
+
+  // Build blob URL iframe
+  var blob    = new Blob([d.document_html || ''], {type:'text/html; charset=utf-8'});
+  var blobUrl = URL.createObjectURL(blob);
+  var iframe  = g('doc-iframe');
+  iframe.addEventListener('load', function() {
+    // Resize
+    try {
+      var h = iframe.contentDocument.documentElement.scrollHeight;
+      if (h > 400) iframe.style.minHeight = (h + 40) + 'px';
+    } catch(e) {}
+    // Enhance DOM
+    try { enhanceIframe(iframe); } catch(e) { console.error('enhanceIframe error:', e); }
+  });
+  iframe.src = blobUrl;
+  show('doc-outer');
+
+  // Pre-fill name
+  g('signer-name').value = d.customer_name || '';
+
+  // Panel sub-line
+  var sub = 'Customer: <strong>' + esc(d.customer_name) + '</strong>';
+  if (s.project_num) sub += ' &nbsp;|&nbsp; Project #<strong>' + esc(String(s.project_num)) + '</strong>';
+  if (s.total)       sub += ' &nbsp;|&nbsp; Total: <strong>$' + Number(s.total).toLocaleString('en-US',{minimumFractionDigits:2}) + '</strong>';
+  g('panel-sub').innerHTML = sub;
+
+  show('action-panel');
+  show('progress-bar');
+}
+
+// ─── Enhance iframe DOM ───────────────────────────────────────
+function enhanceIframe(iframe) {
+  var doc = iframe.contentDocument;
+  if (!doc || !doc.body) return;
+
+  REQUIRED    = [];
+  FILLED      = {};
+  ALSIDE_KEYS = [];
+  var tcCount = 0;   // counts only non-tier initials, so T&C numbering starts at 1
+
+  // Inject styles
+  var s = doc.createElement('style');
+  s.textContent = [
+    '.rhe-ph{display:inline-flex;align-items:center;justify-content:center;min-width:90px;height:26px;',
+    'border:1.5px dashed #e67e22;border-radius:4px;background:#fff8f0;color:#e67e22;font-size:10px;',
+    'font-weight:700;cursor:pointer;vertical-align:middle;padding:0 8px;font-family:Arial,sans-serif;',
+    'transition:background .15s;letter-spacing:.2px;}',
+    '.rhe-ph:hover{background:#fff0e0;}',
+    '.rhe-ph.done{border-style:solid;border-color:#2e7d32;background:#f0fff4;color:#1b5e20;}',
+    '.rhe-sig-ph{display:block;min-height:44px;border:1.5px dashed #e67e22;border-radius:4px;',
+    'background:#fff8f0;color:#e67e22;font-size:12px;font-weight:700;cursor:pointer;',
+    'padding:10px 16px;font-family:Arial,sans-serif;text-align:center;width:100%;transition:background .15s;}',
+    '.rhe-sig-ph:hover{background:#fff0e0;}',
+    '.rhe-sig-ph.done{border-style:solid;border-color:#2e7d32;background:#f0fff4;color:#1b5e20;}',
+    '.rhe-img{cursor:pointer;border-bottom:1px solid #555;}',
+    '.rhe-init-img{height:24px;vertical-align:middle;}',
+    '.rhe-sig-img{display:block;max-height:60px;max-width:100%;}',
+    '.rhe-date{border:none;border-bottom:1.5px solid #1a3a5c;font-size:12px;padding:3px 6px;',
+    'background:#fff;width:130px;font-family:Arial,sans-serif;color:#1a3a5c;font-weight:600;}',
+    '.rhe-date:focus{outline:none;border-bottom-color:#e67e22;}',
+    '.rhe-date-stamp{font-size:12px;font-weight:600;color:#1a3a5c;border-bottom:1px solid #555;',
+    'padding:0 6px 2px;display:inline-block;min-width:110px;font-family:Arial,sans-serif;}',
+    '.rhe-company-attest{font-size:11px;font-weight:600;color:#1a3a5c;border-bottom:1px solid #555;',
+    'padding:0 6px 2px;display:inline-block;min-width:220px;font-family:Arial,sans-serif;font-style:italic;}',
+    /* Center the fixed-width contract pages so they never pin to the left on wide screens */
+    'html,body{background:#e8ecf0 !important;}',
+    '.page{margin-left:auto !important;margin-right:auto !important;box-shadow:0 2px 10px rgba(0,0,0,.12);margin-top:16px;margin-bottom:16px;}'
+  ].join('');
+  doc.head.appendChild(s);
+
+  // Initials bars
+  var initLines = doc.querySelectorAll('.init-line');
+  for (var i = 0; i < initLines.length; i++) {
+    (function(idx) {
+      var key   = 'initials-' + idx;
+      var isAlside = initLines[idx].classList.contains('init-alside-tier');
+      // Two independent sequences. Tier options are numbered among themselves and
+      // always come first in a tiered template. T&C initials are numbered among
+      // themselves from 1, so the count never inherits an offset from the tiers and
+      // never refers to a page position that template reordering can invalidate.
+      var label;
+      if (isAlside) {
+        label = 'Select Option ' + (ALSIDE_KEYS.length + 1);
+      } else {
+        tcCount += 1;
+        label = 'T&C ' + tcCount;
+      }
+      REQUIRED.push({key:key, label:label, type:'initials'});
+      if (isAlside) { ALSIDE_KEYS.push(key); ALSIDE_LABELS[key] = label; }
+
+      var ph        = doc.createElement('span');
+      ph.className  = 'rhe-ph';
+      ph.id         = 'rhe-' + key;
+      ph.textContent= isAlside ? '✏ Initial to select this option' : '✏ Tap to initial';
+      ph.addEventListener('click', function() { window.parent.rheOpenModal(key, label); });
+      initLines[idx].replaceWith(ph);
+    })(i);
+  }
+
+  // If there are comparison tier initials — only ONE of the group is required.
+  // The sentinel goes FIRST in REQUIRED, because the tier cards come before the
+  // T&C pages in the document and the chip row should follow the same order the
+  // customer meets the fields in. Label is type-neutral: the same r2 renderer
+  // produces these cards for roofing and siding comparisons alike.
+  if (ALSIDE_KEYS.length > 1) {
+    REQUIRED = REQUIRED.filter(function(r) {
+      // Remove all tier keys from required — replace with a single sentinel
+      return ALSIDE_KEYS.indexOf(r.key) === -1;
+    });
+    REQUIRED.unshift({key:'alside-selection', label:'Select one option', type:'initials'});
+  }
+
+  // Signature and date blocks.
+  //
+  // Only the CUSTOMER line is signable. The company line is not drawn by anyone —
+  // it is stamped at submit as an explicit acceptance record, deliberately not an
+  // imitation of a handwritten signature no person produced.
+  //
+  // Dates are never editable: every date block is stamped with the real signing
+  // date at submit. Company lines and date blocks are addressed by CLASS, because
+  // a contract carries more than one of each and getElementById only ever returned
+  // the first — which is why the representative's line and date came out blank in
+  // the archived document.
+  var sigBlocks = doc.querySelectorAll('.sig-block');
+  var customerSigClaimed = false;
+  for (var j = 0; j < sigBlocks.length; j++) {
+    (function(blk) {
+      var line  = blk.querySelector('.sig-line');
+      var lbl   = blk.querySelector('.sig-label');
+      if (!line || !lbl) return;
+      var text = lbl.textContent.trim();
+
+      if (text.toLowerCase() === 'date') {
+        var ds = doc.createElement('span');
+        ds.className = 'rhe-date-stamp';
+        ds.textContent = signDateStr();
+        line.replaceWith(ds);
+        return;
+      }
+
+      // Company side: matched by label, with position as a fallback so a template
+      // that renames the line still cannot turn it into a customer field.
+      if (/representative/i.test(text) || customerSigClaimed) {
+        var att = doc.createElement('span');
+        att.className = 'rhe-company-attest';
+        att.textContent = 'To be accepted on submission';
+        line.replaceWith(att);
+        return;
+      }
+
+      customerSigClaimed = true;
+      var key   = 'auth-sig';
+      var label = 'Authorization Signature';
+      REQUIRED.push({key:key, label:label, type:'sig'});
+
+      var ph2        = doc.createElement('div');
+      ph2.className  = 'rhe-sig-ph';
+      ph2.id         = 'rhe-' + key;
+      ph2.textContent= '✏ Tap to sign';
+      ph2.addEventListener('click', function() { window.parent.rheOpenModal(key, label); });
+      line.replaceWith(ph2);
+    })(sigBlocks[j]);
+  }
+
+  renderProgress();
+}
+
+// ─── Exposed to iframe ────────────────────────────────────────
+window.rheOpenModal = function(key, label) {
+  openModal(key, label);
+};
+window.rheResetAlside = function() {
+  resetAlsideSelection();
+};
+
+// ─── Progress ─────────────────────────────────────────────────
+function renderProgress() {
+  var chips = g('prog-chips');
+  chips.innerHTML = '';
+  for (var i = 0; i < REQUIRED.length; i++) {
+    (function(f) {
+      var chip = document.createElement('button');
+      chip.className   = 'prog-chip' + (FILLED[f.key] ? ' done' : '');
+      chip.id          = 'chip-' + f.key;
+      chip.textContent = (FILLED[f.key] ? '✓ ' : '') + f.label;
+      chip.onclick     = f.key === 'alside-selection'
+        ? function() { /* scroll to first unselected tier option */
+            var iframe = document.querySelector('iframe');
+            if (iframe && iframe.contentDocument) {
+              var ph = iframe.contentDocument.querySelector('.rhe-ph[id^="rhe-initials-"]');
+              if (ph) ph.scrollIntoView({behavior:'smooth', block:'center'});
+            }
+          }
+        : function() { openModal(f.key, f.label); };
+      chips.appendChild(chip);
+    })(REQUIRED[i]);
+  }
+  var filled = 0;
+  for (var k in FILLED) { if (FILLED.hasOwnProperty(k)) filled++; }
+  g('prog-count').textContent = filled + ' / ' + REQUIRED.length;
+  checkSubmitReady();
+}
+
+function updateChip(key) {
+  var chip = g('chip-' + key);
+  if (!chip) return;
+  var f = REQUIRED.filter(function(r) { return r.key === key; })[0];
+  if (!f) return;
+  chip.className   = 'prog-chip done';
+  chip.textContent = '✓ ' + f.label;
+}
+
+// ─── Modal ────────────────────────────────────────────────────
+function openModal(key, label) {
+  modalField = key;
+  g('modal-title').textContent = key === 'auth-sig' ? 'Sign Authorization' : 'Add Initials';
+  g('modal-sub').textContent   = label || '';
+
+  if (!modalCtx) initModalCanvas();
+  clearModalCanvas();
+  mTab('draw');
+  g('modal-type-input').value = '';
+
+  // Pre-fill if already done
+  if (FILLED[key]) {
+    var img = new Image();
+    var mc  = g('modal-canvas');
+    img.onload = function() {
+      modalCtx.drawImage(img, 0, 0, mc.width, mc.height);
+      modalDirty = true;
+      g('modal-hint').style.display = 'none';
+      checkModalReady();
+    };
+    img.src = FILLED[key];
+  }
+
+  g('sig-modal').style.display = 'flex';
+  document.body.style.overflow  = 'hidden';
+}
+
+function closeModal() {
+  g('sig-modal').style.display = 'none';
+  document.body.style.overflow  = '';
+  modalField = null;
+}
+
+g('sig-modal').addEventListener('click', function(e) {
+  if (e.target === g('sig-modal')) closeModal();
+});
+
+function applyModal() {
+  var dataUrl = getModalDataUrl();
+  if (!dataUrl || !modalField) return;
+
+  // Comparison option chosen → mutually exclusive: record this one, DISABLE the other options.
+  if (ALSIDE_KEYS.length > 1 && ALSIDE_KEYS.indexOf(modalField) !== -1) {
+    // Selection is tracked by a single sentinel key, not per-tier keys (keeps the progress count clean).
+    for (var ci = 0; ci < ALSIDE_KEYS.length; ci++) delete FILLED[ALSIDE_KEYS[ci]];
+    ALSIDE_SELECTED = { key: modalField, dataUrl: dataUrl };
+    FILLED['alside-selection'] = dataUrl;
+    renderAlsideGroup();
+    updateChip('alside-selection');
+    closeModal();
+    renderProgress();   // recomputes count + chips + submit-ready
+    return;
+  }
+
+  FILLED[modalField] = dataUrl;
+  injectIntoIframe(modalField, dataUrl);
+  updateChip(modalField);
+  g('prog-count').textContent = Object.keys(FILLED).length + ' / ' + REQUIRED.length;
+  closeModal();
+  checkSubmitReady();
+}
+
+// Render the comparison option group in the document iframe: the chosen option shows the
+// customer's initials (tap to change), the other options are disabled (greyed, not clickable).
+function renderAlsideGroup() {
+  var ifrDoc = g('doc-iframe').contentDocument;
+  if (!ifrDoc || !ALSIDE_SELECTED) return;
+  for (var i = 0; i < ALSIDE_KEYS.length; i++) {
+    var k  = ALSIDE_KEYS[i];
+    var el = ifrDoc.getElementById('rhe-' + k);
+    if (!el) continue;
+    if (k === ALSIDE_SELECTED.key) {
+      var img = ifrDoc.createElement('img');
+      img.src = ALSIDE_SELECTED.dataUrl;
+      img.className = 'rhe-img rhe-init-img';
+      img.id = 'rhe-' + k;
+      img.title = 'Tap to change your selection';
+      img.style.cursor = 'pointer';
+      img.addEventListener('click', function(){ window.parent.rheResetAlside(); });
+      el.replaceWith(img);
+    } else {
+      var span = ifrDoc.createElement('span');
+      span.className = 'rhe-ph';
+      span.id = 'rhe-' + k;
+      span.style.opacity = '0.4';
+      span.style.cursor = 'not-allowed';
+      span.style.textDecoration = 'line-through';
+      span.style.pointerEvents = 'none';   // truly disabled — cannot be initialed while another is chosen
+      span.textContent = '🔒 Not selected';
+      el.replaceWith(span);
+    }
+  }
+}
+
+// Clear the comparison choice and re-enable all options (so the customer can change their mind).
+function resetAlsideSelection() {
+  var ifrDoc = g('doc-iframe').contentDocument;
+  ALSIDE_SELECTED = null;
+  delete FILLED['alside-selection'];
+  for (var i = 0; i < ALSIDE_KEYS.length; i++) {
+    (function(k){
+      delete FILLED[k];
+      if (!ifrDoc) return;
+      var el = ifrDoc.getElementById('rhe-' + k);
+      if (!el) return;
+      var ph = ifrDoc.createElement('span');
+      ph.className = 'rhe-ph';
+      ph.id = 'rhe-' + k;
+      ph.textContent = '✏ Initial to select this option';
+      ph.addEventListener('click', function(){ window.parent.rheOpenModal(k, ALSIDE_LABELS[k] || 'Select Option'); });
+      el.replaceWith(ph);
+    })(ALSIDE_KEYS[i]);
+  }
+  renderProgress();
+}
+
+function getModalDataUrl() {
+  if (modalTab === 'draw') {
+    if (!modalDirty) return null;
+    return g('modal-canvas').toDataURL('image/png');
+  }
+  var txt = g('modal-type-input').value.trim();
+  if (!txt) return null;
+  return typedImg(txt, 500, 100, '42px');
+}
+
+function mTab(t) {
+  modalTab = t;
+  g('mdraw-panel').style.display = t === 'draw' ? 'block' : 'none';
+  g('mtype-panel').style.display = t === 'type' ? 'block' : 'none';
+  g('mtab-draw').classList.toggle('active', t === 'draw');
+  g('mtab-type').classList.toggle('active', t === 'type');
+  checkModalReady();
+}
+function checkModalReady() {
+  var ok = modalTab === 'draw' ? modalDirty : (g('modal-type-input').value||'').trim().length > 1;
+  g('modal-apply-btn').disabled = !ok;
+}
+function initModalCanvas() {
+  var c = g('modal-canvas');
+  modalCtx = c.getContext('2d');
+  modalCtx.strokeStyle='#1a3a5c'; modalCtx.lineWidth=2.5; modalCtx.lineCap='round'; modalCtx.lineJoin='round';
+  attachDraw(c, modalCtx,
+    function() { return modalDrawing; }, function(v) { modalDrawing=v; },
+    function() { modalDirty=true; g('modal-hint').style.display='none'; checkModalReady(); }
+  );
+}
+function clearModalCanvas() {
+  var c=g('modal-canvas'); modalCtx&&modalCtx.clearRect(0,0,c.width,c.height);
+  modalDirty=false; g('modal-hint').style.display='block'; checkModalReady();
+}
+
+// ─── Inject into iframe ───────────────────────────────────────
+function injectIntoIframe(key, dataUrl) {
+  try {
+    var doc = g('doc-iframe').contentDocument;
+    if (!doc) return;
+    var ph = doc.getElementById('rhe-' + key);
+    if (!ph) return;
+    var img = doc.createElement('img');
+    img.src = dataUrl;
+    img.className = key.indexOf('initials')===0 ? 'rhe-img rhe-init-img' : 'rhe-img rhe-sig-img';
+    img.title = 'Click to re-sign'; img.id = 'rhe-' + key;
+    (function(k){ img.addEventListener('click', function(){ window.parent.rheOpenModal(k,k); }); })(key);
+    ph.replaceWith(img);
+  } catch(e) { console.error('inject:', e); }
+}
+
+// ─── Draw events (mouse + touch) ─────────────────────────────
+function attachDraw(canvas, ctx, getDrawing, setDrawing, onMark) {
+  function getPos(e) {
+    var r=canvas.getBoundingClientRect(), sx=canvas.width/r.width, sy=canvas.height/r.height;
+    var src=e.touches?e.touches[0]:e;
+    return {x:(src.clientX-r.left)*sx, y:(src.clientY-r.top)*sy};
+  }
+  function down(e){ e.preventDefault(); setDrawing(true); var p=getPos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); }
+  function move(e){ e.preventDefault(); if(!getDrawing()) return; var p=getPos(e); ctx.lineTo(p.x,p.y); ctx.stroke(); onMark(); }
+  function up(e)  { e.preventDefault(); setDrawing(false); }
+  canvas.addEventListener('mousedown', down);
+  canvas.addEventListener('mousemove', move);
+  canvas.addEventListener('mouseup',   up);
+  canvas.addEventListener('mouseleave', function(){ setDrawing(false); });
+  canvas.addEventListener('touchstart', down, {passive:false});
+  canvas.addEventListener('touchmove',  move, {passive:false});
+  canvas.addEventListener('touchend',   up,   {passive:false});
+  canvas.addEventListener('touchcancel',up,   {passive:false});
+}
+
+// ─── Typed signature image ────────────────────────────────────
+function typedImg(text, w, h, size) {
+  var tc=document.createElement('canvas'); tc.width=w; tc.height=h;
+  var tx=tc.getContext('2d');
+  tx.fillStyle='#fff'; tx.fillRect(0,0,w,h);
+  tx.fillStyle='#1a3a5c';
+  tx.font=(size||'44px')+' "Brush Script MT",cursive,Arial';
+  tx.textBaseline='bottom'; tx.fillText(text,14,h-10);
+  return tc.toDataURL('image/png');
+}
+
+// ─── Submit readiness ─────────────────────────────────────────
+function checkSubmitReady() {
+  var allFilled=REQUIRED.length>0&&REQUIRED.every(function(f){ return !!FILLED[f.key]; });
+  var consent=g('ueta-cb').checked;
+  var name=(g('signer-name').value||'').trim().length>2;
+  g('submit-btn').disabled=!(allFilled&&consent&&name);
+}
+
+// ─── Submit ───────────────────────────────────────────────────
+async function submitSig() {
+  g('err-msg').style.display='none';
+  var signerName=g('signer-name').value.trim();
+  var keys=Object.keys(FILLED);
+  var primarySig=FILLED['auth-sig']||(keys.length?FILLED[keys[0]]:'');
+  var signedAt=new Date();
+  var consentAt=signedAt.toISOString();
+  var authDate=signDateStr(signedAt);
+  try {
+    var iDoc=g('doc-iframe').contentDocument;
+    // Stamp EVERY date block with the actual signing date. Not editable, not
+    // pre-typed — the date on the contract is the date it was signed.
+    var stamps=iDoc.querySelectorAll('.rhe-date-stamp');
+    for (var si=0; si<stamps.length; si++) stamps[si].textContent=authDate;
+    // Stamp EVERY company line as accepted, with the same timestamp.
+    var atts=iDoc.querySelectorAll('.rhe-company-attest');
+    var attText='Accepted by Renew Home Exteriors — '+signStampStr(signedAt);
+    for (var ai=0; ai<atts.length; ai++) atts[ai].textContent=attText;
+    // Both are spans, so outerHTML carries their text. An <input> would not have:
+    // its JS-set .value is never serialized.
+  } catch(e){}
+  var completedHtml='';
+  try { completedHtml=g('doc-iframe').contentDocument.documentElement.outerHTML; } catch(e){}
+  g('submit-loading').style.display='flex'; g('submit-btn').disabled=true;
+  try {
+    var res=await fetch(COMPLETE_URL,{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        token:TOKEN, signer_name:signerName, signature_data:primarySig,
+        ueta_consent:true, consent_at:consentAt, initials_data:FILLED,
+        auth_date:authDate, completed_document_html:completedHtml
+      })
+    });
+    var data=await res.json();
+    g('submit-loading').style.display='none';
+    if (res.ok&&data.success) {
+      g('action-panel').innerHTML=
+        '<div style="text-align:center;padding:40px 24px">'+
+        '<div style="font-size:64px;margin-bottom:16px">&#10003;</div>'+
+        '<h2 style="color:#2e7d32;margin-bottom:12px">Document Signed Successfully!</h2>'+
+        '<p style="color:#555;line-height:1.8;max-width:420px;margin:0 auto">Thank you, <strong>'+esc(signerName)+'</strong>. '+
+        'Your signed document has been recorded. A confirmation copy has been emailed to you.</p>'+
+        '<p style="margin-top:20px;font-size:12px;color:#aaa">Signed at '+new Date().toLocaleString()+'<br>UETA &amp; E-SIGN Act compliant</p>'+
+        '</div>';
+      g('progress-bar').style.display='none';
+    } else { throw new Error(data.error||'Signing failed. Please try again.'); }
+  } catch(ex) {
+    g('submit-loading').style.display='none'; g('submit-btn').disabled=false;
+    g('err-msg').textContent=ex.message; g('err-msg').style.display='block';
+    g('err-msg').scrollIntoView({behavior:'smooth',block:'center'});
+  }
+}
+
+// ─── Helpers ─────────────────────────────────────────────────
+function g(id)    { return document.getElementById(id); }
+function signDateStr(d) { return (d || new Date()).toLocaleDateString('en-US'); }
+// Acceptance timestamp for the company line. Carries a timezone label: the clock is
+// the signer's device, so an unlabelled time would be ambiguous on a contract.
+// (signing_sessions.signed_at remains the authoritative server-side record.)
+// dateStyle/timeStyle cannot be combined with timeZoneName per ECMA-402, so the
+// components are listed explicitly, with a fallback for engines that still object.
+function signStampStr(d) {
+  d = d || new Date();
+  try {
+    return d.toLocaleString('en-US', {
+      year:'numeric', month:'numeric', day:'numeric',
+      hour:'numeric', minute:'2-digit', second:'2-digit', timeZoneName:'short'
+    });
+  } catch (e) {
+    return d.toLocaleDateString('en-US') + ' ' + d.toLocaleTimeString('en-US');
+  }
+}
+function show(id) { document.getElementById(id).style.display='block'; }
+function hide(id) { document.getElementById(id).style.display='none'; }
+function esc(s)   { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function showErr(title, msg) {
+  hide('loading-screen');
+  g('err-title').textContent=title; g('err-body').innerHTML=msg;
+  g('top-badge').textContent='LINK ERROR'; g('top-badge').style.background='#c0392b';
+  g('error-screen').style.display='flex';
+}
+</script>
+</body>
+</html>
