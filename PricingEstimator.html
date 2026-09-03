@@ -213,6 +213,8 @@
   /* WARN/INFO */
   .warn { color: var(--accent); font-size: 10px; margin-top: 3px; font-weight: 600; }
   .info-box { background: #e8f4fd; border: 1px solid #b3d9f5; border-radius: 7px; padding: 10px 12px; font-size: 12px; color: #1a3a5c; }
+  .data-error-banner { background: #fdecea; border-bottom: 2px solid #e53935; color: #611a15; font-size: 12px; padding: 10px 32px; line-height: 1.5; }
+  .data-error-banner button { margin-left: 8px; background: #e53935; color: #fff; border: 0; border-radius: 5px; padding: 4px 10px; font-size: 11px; font-weight: 700; cursor: pointer; }
   .template-active-banner { background: var(--primary); color: #fff; border-radius: 7px; padding: 8px 12px; font-size: 12px; display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 
   /* SCROLLBAR */
@@ -386,10 +388,10 @@
 </nav>
 
 <div class="status-bar">
-  <span><span class="status-dot"></span> Live Pricing — 134 Products</span>
+  <span id="statusPricing"><span class="status-dot" style="background:#bbb"></span> Pricing — not loaded</span>
   <span id="statusTemplate">No Template Selected</span>
-  <span>Last Updated: 2025</span>
 </div>
+<div class="data-error-banner no-print" id="dataLoadBanner" hidden></div>
 
 <!-- MOBILE TAB BAR -->
 <div class="mobile-tab-bar" id="mobileTabBar">
@@ -1058,146 +1060,16 @@ async function initGoogleAutocomplete() {
 window.addEventListener('load', loadGoogleAutocomplete);
 
 // ============================================================
-// PRODUCT DATA (hardcoded fallback — overridden by Supabase on load)
+// PRODUCT DATA — loaded from Supabase after sign-in.
+// There is deliberately NO hardcoded fallback catalog. Two reasons:
+//   1. This file is served as a static asset, so a literal catalog here is
+//      readable via view-source by anyone with the URL — including mat,
+//      labor and margin. The login gate does not cover page source.
+//   2. A silent fallback made an access-denied response (deactivated user,
+//      no tenant, RLS deny) render as a fully populated app.
+// An empty or rejected response is now surfaced, not papered over.
 // ============================================================
-let PRODUCTS = [
-  {id:'17dbb335',name:'Metal Roof',unit:'SQ',price:1250,mat:250,labor:250,margin:60,tax:'n',cat:'Roofing'},
-  {id:'ab13a53b',name:'Detached Garage Roof — IKO',unit:'SQ',price:484.44,mat:118,labor:100,margin:55,tax:'n',cat:'Roofing'},
-  {id:'7c14469e',name:'Detached Garage Roof — GAF',unit:'SQ',price:500,mat:null,labor:null,margin:54,tax:'n',cat:'Roofing'},
-  {id:'gafhz',name:'GAF HDZ Shingles',unit:'SQ',price:418.19,mat:130,labor:100,margin:45,tax:'n',cat:'Roofing'},
-  {id:'ikocam',name:'IKO Cambridge Shingles',unit:'SQ',price:396.37,mat:118,labor:100,margin:45,tax:'n',cat:'Roofing'},
-  {id:'975bec88',name:'Decking Replacement (per sheet)',unit:'EA',price:65.22,mat:15,labor:15,margin:54,tax:'n',cat:'Roofing'},
-  {id:'redeck',name:'Redeck (per SQ)',unit:'SQ',price:220,mat:null,labor:null,margin:50,tax:'n',cat:'Roofing'},
-  {id:'extra',name:'Extra Layer Removal (2nd layer)',unit:'SQ',price:45,mat:null,labor:null,margin:50,tax:'n',cat:'Roofing'},
-  {id:'steep1',name:'Steep Pitch Surcharge (7-10)',unit:'SQ',price:30,mat:null,labor:15,margin:50,tax:'n',cat:'Roofing'},
-  {id:'steep2',name:'Very Steep Pitch Surcharge (11+)',unit:'SQ',price:40,mat:null,labor:20,margin:50,tax:'n',cat:'Roofing'},
-  {id:'slateco',name:'Slate / Clay / Shake Tear Off',unit:'SQ',price:320,mat:null,labor:null,margin:0,tax:'n',cat:'Roofing'},
-  {id:'gafme',name:'GAF Master Elite Lifetime Warranty',unit:'SQ',price:250.01,mat:150,labor:0,margin:40,tax:'n',cat:'Roofing'},
-  {id:'pealnseal',name:'Peel & Seal Flat Roof',unit:'SQ',price:560,mat:null,labor:null,margin:50,tax:'n',cat:'Roofing'},
-  {id:'flat',name:'Flat Roof Seam & Crack Repair',unit:'EA',price:400,mat:null,labor:null,margin:54,tax:'n',cat:'Roofing'},
-  {id:'silicone',name:'Renew Silicone Seal — Commercial Roof',unit:'SQ',price:600,mat:null,labor:null,margin:54,tax:'n',cat:'Roofing'},
-  {id:'f9748aee',name:'Drip Edge',unit:'LF',price:1.54,mat:1,labor:0,margin:35,tax:'n',cat:'Roofing'},
-  {id:'icewater',name:'Ice & Water Shield',unit:'LF',price:1.82,mat:1,labor:0,margin:45,tax:'n',cat:'Roofing'},
-  {id:'ridge',name:'New Ridge Vent & Cap',unit:'EA',price:24.62,mat:13,labor:3,margin:35,tax:'n',cat:'Roofing'},
-  {id:'leading',name:'Leading Edge Starter Strip',unit:'LF',price:3.33,mat:2,labor:0,margin:40,tax:'n',cat:'Roofing'},
-  {id:'step',name:'Step Flashing',unit:'LF',price:7,mat:1.2,labor:3,margin:40,tax:'n',cat:'Roofing'},
-  {id:'chimney',name:'Chimney Flashing',unit:'EA',price:436.93,mat:164,labor:120,margin:35,tax:'n',cat:'Roofing'},
-  {id:'skylight',name:'Skylight',unit:'EA',price:2500,mat:null,labor:null,margin:50,tax:'n',cat:'Roofing'},
-  {id:'skylightflash',name:'Skylight Flashing Only',unit:'EA',price:300,mat:null,labor:null,margin:50,tax:'n',cat:'Roofing'},
-  {id:'skylightrem',name:'Skylight Removal',unit:'EA',price:350,mat:null,labor:null,margin:54,tax:'n',cat:'Roofing'},
-  {id:'pipebo',name:'Pipe Boot DuraFlo — Black',unit:'EA',price:75,mat:45,labor:0,margin:40,tax:'n',cat:'Roofing'},
-  {id:'catwalks',name:'Cat Walks',unit:'EA',price:1125,mat:null,labor:null,margin:50,tax:'n',cat:'Roofing'},
-  {id:'solarfan',name:'Solar Powered Attic Fan',unit:'SQ',price:500,mat:null,labor:null,margin:54,tax:'n',cat:'Roofing'},
-  {id:'nails',name:'Nails with Cap',unit:'BX',price:131.67,mat:79,labor:0,margin:40,tax:'n',cat:'Roofing'},
-  {id:'590da916',name:'Charter Oak Siding',unit:'SQ',price:781.24,mat:195,labor:180,margin:52,tax:'n',cat:'Siding'},
-  {id:'3bbe038e',name:'Ascend Fiber Composite Siding',unit:'SQ',price:1075.54,mat:309,labor:175,margin:55,tax:'n',cat:'Siding'},
-  {id:'d402c18e',name:'Ascend Board & Batten',unit:'SQ',price:1322.21,mat:410,labor:185,margin:55,tax:'n',cat:'Siding'},
-  {id:'b83178b4',name:'Board N Batten Siding',unit:'SQ',price:1060,mat:350,labor:180,margin:50,tax:'n',cat:'Siding'},
-  {id:'odyssey',name:'Odyssey Plus Siding',unit:'SQ',price:740.44,mat:168,labor:180,margin:53,tax:'n',cat:'Siding'},
-  {id:'odysseywrap',name:'Odyssey Plus w/ House Wrap',unit:'SQ',price:691.5,mat:145,labor:180,margin:53,tax:'n',cat:'Siding'},
-  {id:'renewinv',name:'Renew Investor Builder Grade Siding',unit:'SQ',price:596,mat:118,labor:180,margin:50,tax:'n',cat:'Siding'},
-  {id:'tando',name:'Tando Siding',unit:'SQ',price:2928.57,mat:850,labor:175,margin:65,tax:'n',cat:'Siding'},
-  {id:'tandoc',name:'Tando Corners / Ledges',unit:'LF',price:71.43,mat:25,labor:null,margin:65,tax:'n',cat:'Siding'},
-  {id:'cultstone',name:'Culture Stone',unit:'SQ',price:6300,mat:null,labor:null,margin:50,tax:'n',cat:'Siding'},
-  {id:'cultstledge',name:'Culture Stone Ledges',unit:'LF',price:200,mat:null,labor:null,margin:50,tax:'n',cat:'Siding'},
-  {id:'shake',name:'Shake / Scallop Siding',unit:'SQ',price:1166.67,mat:350,labor:175,margin:55,tax:'n',cat:'Siding'},
-  {id:'fullback',name:'Full Back Siding Charter Oak (Drop In)',unit:'SQ',price:1100,mat:null,labor:null,margin:54,tax:'n',cat:'Siding'},
-  {id:'fermout',name:'Fer Out Over Brick / Stucco',unit:'SQ',price:397.5,mat:46,labor:113,margin:60,tax:'n',cat:'Siding'},
-  {id:'tearoff',name:'Tear Off Brick',unit:'LF',price:37.5,mat:null,labor:15,margin:60,tax:'n',cat:'Siding'},
-  {id:'dormersid',name:'Dormer Siding',unit:'EA',price:888.88,mat:150,labor:250,margin:55,tax:'n',cat:'Siding'},
-  {id:'c0dea62f',name:'Detached Garage Siding — Charter Oak',unit:'SQ',price:955.55,mat:250,labor:180,margin:55,tax:'n',cat:'Siding'},
-  {id:'84d721fe',name:'Detached Garage Siding — Odyssey Plus',unit:'SQ',price:844.44,mat:200,labor:180,margin:55,tax:'n',cat:'Siding'},
-  {id:'sidcorn',name:'Siding Corners',unit:'EA',price:60,mat:27,labor:0,margin:55,tax:'n',cat:'Siding'},
-  {id:'sidfastn',name:'Siding Fasteners',unit:'BX',price:144.44,mat:65,labor:0,margin:55,tax:'n',cat:'Siding'},
-  {id:'mountblk',name:'Mounting Blocks — Lights & Water',unit:'EA',price:55.56,mat:15,labor:10,margin:55,tax:'n',cat:'Siding'},
-  {id:'shutters',name:'Shutters',unit:'EA',price:237.5,mat:75,labor:20,margin:60,tax:'n',cat:'Siding'},
-  {id:'rrshut',name:'R&R Shutters',unit:'EA',price:44.44,mat:null,labor:20,margin:55,tax:'n',cat:'Siding'},
-  {id:'rottwood',name:'Rotten Wood Repair',unit:'SQ',price:288,mat:null,labor:null,margin:50,tax:'n',cat:'Siding'},
-  {id:'gutter5',name:'Gutter 5-inch',unit:'LF',price:14,mat:7,labor:null,margin:50,tax:'n',cat:'Gutters & Trim'},
-  {id:'gutter6',name:'Gutters 6-inch',unit:'LF',price:20,mat:10,labor:null,margin:50,tax:'n',cat:'Gutters & Trim'},
-  {id:'gutterds',name:'Gutter Down Spouts',unit:'LF',price:14,mat:7,labor:null,margin:50,tax:'n',cat:'Gutters & Trim'},
-  {id:'guttercover',name:'Gutter Cover SureFlo',unit:'LF',price:15,mat:7.5,labor:null,margin:50,tax:'n',cat:'Gutters & Trim'},
-  {id:'facia',name:'Fascia',unit:'LF',price:12.5,mat:2.5,labor:2.5,margin:60,tax:'n',cat:'Gutters & Trim'},
-  {id:'faciabrd',name:'Fascia Board per Ft',unit:'LF',price:12.22,mat:3,labor:2.5,margin:55,tax:'n',cat:'Gutters & Trim'},
-  {id:'pvfacia',name:'PVC Fascia',unit:'LF',price:16.67,mat:5,labor:2.5,margin:55,tax:'n',cat:'Gutters & Trim'},
-  {id:'slipfacia',name:'Slip Cap Fascia',unit:'LF',price:12,mat:null,labor:null,margin:54,tax:'n',cat:'Gutters & Trim'},
-  {id:'freezebrd',name:'Install Freeze Board',unit:'LF',price:28.89,mat:8,labor:5,margin:55,tax:'n',cat:'Gutters & Trim'},
-  {id:'beamcap',name:'Beam Capping (per 10ft)',unit:'EA',price:345,mat:null,labor:null,margin:50,tax:'n',cat:'Gutters & Trim'},
-  {id:'dormercap',name:'Dormer Capping',unit:'EA',price:416.68,mat:100,labor:150,margin:40,tax:'n',cat:'Gutters & Trim'},
-  {id:'vinylsoffit',name:'Vinyl Soffit',unit:'SQ',price:814,mat:257,labor:150,margin:50,tax:'n',cat:'Gutters & Trim'},
-  {id:'porchsoffit',name:'Porch Solid Soffit',unit:'SQ',price:814,mat:257,labor:150,margin:50,tax:'n',cat:'Gutters & Trim'},
-  {id:'awning_lg',name:'Large Awnings',unit:'EA',price:1590,mat:null,labor:null,margin:50,tax:'n',cat:'Gutters & Trim'},
-  {id:'awning_sm',name:'Small Awnings',unit:'EA',price:1060,mat:null,labor:null,margin:40,tax:'n',cat:'Gutters & Trim'},
-  {id:'rrawning',name:'R&R Awning',unit:'EA',price:88.89,mat:null,labor:40,margin:55,tax:'n',cat:'Gutters & Trim'},
-  {id:'e56bceaa',name:'Double Hung Double Pane Window',unit:'EA',price:860,mat:295,labor:135,margin:50,tax:'n',cat:'Windows'},
-  {id:'144ac6df',name:'Casement Double Pane',unit:'EA',price:1300,mat:500,labor:150,margin:50,tax:'n',cat:'Windows'},
-  {id:'7d72a28d',name:'4-Lite Casement Double Pane',unit:'EA',price:3500,mat:1500,labor:250,margin:50,tax:'n',cat:'Windows'},
-  {id:'178b6622',name:'Double Casement Double Pane',unit:'EA',price:1934,mat:null,labor:null,margin:50,tax:'n',cat:'Windows'},
-  {id:'tcc',name:'Triple Casement Double Pane',unit:'EA',price:2735,mat:null,labor:null,margin:50,tax:'n',cat:'Windows'},
-  {id:'2e0ca2a5',name:'3-Lite Slider Double Pane',unit:'EA',price:1520.02,mat:675,labor:161,margin:45,tax:'y',cat:'Windows'},
-  {id:'slider',name:'Slider Double Pane',unit:'EA',price:1117.77,mat:373,labor:130,margin:55,tax:'n',cat:'Windows'},
-  {id:'singlehung',name:'Single Hung Double Pane',unit:'EA',price:788.88,mat:220,labor:135,margin:55,tax:'n',cat:'Windows'},
-  {id:'picture',name:'Picture Double Pane',unit:'EA',price:1391.1,mat:466,labor:160,margin:55,tax:'n',cat:'Windows'},
-  {id:'baybow',name:'Bay / Bow Double Pane',unit:'EA',price:6333.27,mat:2500,labor:350,margin:55,tax:'n',cat:'Windows'},
-  {id:'awningwin',name:'Awning Window',unit:'EA',price:1300,mat:500,labor:150,margin:50,tax:'n',cat:'Windows'},
-  {id:'garden',name:'Garden Window Double Pane',unit:'EA',price:6678,mat:null,labor:null,margin:50,tax:'n',cat:'Windows'},
-  {id:'glassblock',name:'Basement Glass Block Windows',unit:'EA',price:660,mat:200,labor:130,margin:50,tax:'n',cat:'Windows'},
-  {id:'glassblocknovent',name:'Glass Block Window — No Vents',unit:'EA',price:660,mat:200,labor:130,margin:50,tax:'n',cat:'Windows'},
-  {id:'glassblockdryer',name:'Glass Block — Dryer Vent',unit:'EA',price:660,mat:200,labor:130,margin:50,tax:'n',cat:'Windows'},
-  {id:'78bd5ac1',name:'Basement Hopper Window',unit:'EA',price:645.46,mat:225,labor:130,margin:45,tax:'n',cat:'Windows'},
-  {id:'renewpic',name:'Renew Investor Picture Window',unit:'EA',price:1140,mat:420,labor:150,margin:50,tax:'n',cat:'Windows'},
-  {id:'renewsing',name:'Renew Investor Single Hung Windows',unit:'EA',price:710,mat:220,labor:135,margin:50,tax:'n',cat:'Windows'},
-  {id:'renewslid',name:'Renew Investor Slider Window',unit:'EA',price:950,mat:350,labor:125,margin:50,tax:'n',cat:'Windows'},
-  {id:'oversized',name:'Oversized Window (101+ sq in)',unit:'EA',price:102.22,mat:46,labor:null,margin:55,tax:'n',cat:'Windows'},
-  {id:'winminjob',name:'Windows Min Job (1-3)',unit:'EA',price:350,mat:null,labor:null,margin:50,tax:'n',cat:'Windows'},
-  {id:'wingrid',name:'Window Grids',unit:'EA',price:168.89,mat:76,labor:null,margin:55,tax:'n',cat:'Window Upgrades'},
-  {id:'wintemper',name:'Window Tempered Glass',unit:'EA',price:130,mat:null,labor:null,margin:54,tax:'n',cat:'Window Upgrades'},
-  {id:'winobscure',name:'Window Obscured Glass',unit:'EA',price:150,mat:null,labor:null,margin:54,tax:'n',cat:'Window Upgrades'},
-  {id:'wintriple',name:'Window Triple Pane Glass',unit:'EA',price:200,mat:null,labor:null,margin:54,tax:'n',cat:'Window Upgrades'},
-  {id:'winwood',name:'Window Wood Grain',unit:'EA',price:122.22,mat:55,labor:null,margin:55,tax:'n',cat:'Window Upgrades'},
-  {id:'winextcol',name:'Window Exterior Color',unit:'EA',price:366.66,mat:165,labor:null,margin:55,tax:'n',cat:'Window Upgrades'},
-  {id:'winscreen',name:'Full Window Screen',unit:'EA',price:55.56,mat:25,labor:null,margin:55,tax:'n',cat:'Window Upgrades'},
-  {id:'winblinds',name:'Internal Blinds — Patio Door',unit:'EA',price:1333.32,mat:600,labor:null,margin:55,tax:'n',cat:'Window Upgrades'},
-  {id:'fypon',name:'Fypon Window Decorative',unit:'EA',price:600,mat:150,labor:150,margin:50,tax:'n',cat:'Window Upgrades'},
-  {id:'fullwincap',name:'Full Window Cap',unit:'EA',price:148,mat:19,labor:55,margin:50,tax:'n',cat:'Window Upgrades'},
-  {id:'pvcwincap',name:'PVC Window Caps',unit:'EA',price:200,mat:null,labor:null,margin:54,tax:'n',cat:'Window Upgrades'},
-  {id:'entry1',name:'Entry Door #JW735641 (Half Window w/ Grids)',unit:'EA',price:2599,mat:null,labor:null,margin:50,tax:'n',cat:'Doors'},
-  {id:'entry2',name:'Entry Door #THDJW184500210 (Half Moon)',unit:'EA',price:2385,mat:null,labor:null,margin:50,tax:'n',cat:'Doors'},
-  {id:'entry3',name:'Entry Door JW166100275 (Solid Panel)',unit:'EA',price:2198,mat:null,labor:null,margin:54,tax:'n',cat:'Doors'},
-  {id:'entry4',name:'Entry Door JW166500735 (Full View Glass)',unit:'EA',price:3190,mat:null,labor:null,margin:50,tax:'n',cat:'Doors'},
-  {id:'entry5',name:'Entry Door JW184700025 (Half Window w/ Blinds)',unit:'EA',price:3190,mat:null,labor:null,margin:50,tax:'n',cat:'Doors'},
-  {id:'entry6',name:'Entry Door JWQC228200017 (Square Top w/ Grids)',unit:'EA',price:2650,mat:null,labor:null,margin:50,tax:'n',cat:'Doors'},
-  {id:'patio6',name:'Patio Door 6ft (DP Glass)',unit:'EA',price:3725.6,mat:1491,labor:260,margin:53,tax:'n',cat:'Doors'},
-  {id:'patio6r',name:'Patio Door 6ft (DP Glass) 5-inch Rails',unit:'EA',price:3850,mat:null,labor:null,margin:54,tax:'n',cat:'Doors'},
-  {id:'patio9',name:'Patio Door 9ft (DP Glass)',unit:'EA',price:4000,mat:1200,labor:400,margin:60,tax:'n',cat:'Doors'},
-  {id:'patio12',name:'Patio Door 12ft (DP Glass)',unit:'EA',price:4500,mat:1400,labor:400,margin:60,tax:'n',cat:'Doors'},
-  {id:'storm1',name:'Storm Door L146FV',unit:'EA',price:1890,mat:null,labor:null,margin:54,tax:'n',cat:'Doors'},
-  {id:'storm2',name:'Storm Door L146HV',unit:'EA',price:1350,mat:null,labor:null,margin:50,tax:'n',cat:'Doors'},
-  {id:'storm3',name:'Storm Door L830',unit:'EA',price:1450,mat:null,labor:null,margin:50,tax:'n',cat:'Doors'},
-  {id:'petstorm1',name:'Pet Storm Door L146PV',unit:'EA',price:2350,mat:null,labor:null,margin:54,tax:'n',cat:'Doors'},
-  {id:'petstorm2',name:'Pet Storm Door LPD370',unit:'EA',price:1550,mat:null,labor:null,margin:54,tax:'n',cat:'Doors'},
-  {id:'petstorm3',name:'Pet Storm Door LPDXL370',unit:'EA',price:1850,mat:null,labor:null,margin:50,tax:'n',cat:'Doors'},
-  {id:'fullentcap',name:'Full Entry / Patio Door Cap',unit:'EA',price:290,mat:70,labor:75,margin:50,tax:'n',cat:'Doors'},
-  {id:'pvcdoorcap',name:'PVC Door Caps',unit:'EA',price:311.11,mat:85,labor:55,margin:55,tax:'n',cat:'Doors'},
-  {id:'pvgarcap',name:'PVC Garage Door Cap',unit:'EA',price:680,mat:null,labor:null,margin:54,tax:'n',cat:'Doors'},
-  {id:'garcap',name:'Garage Door Cap',unit:'EA',price:688.89,mat:125,labor:185,margin:55,tax:'n',cat:'Doors'},
-  {id:'5d18b92f',name:'4x4 Post Cap Over 8 FT',unit:'EA',price:300,mat:75,labor:60,margin:55,tax:'n',cat:'Posts & Columns'},
-  {id:'cc202eb6',name:'4x4 Post Cap Up to 8 FT',unit:'EA',price:222.22,mat:60,labor:40,margin:55,tax:'n',cat:'Posts & Columns'},
-  {id:'4103c81a',name:'6x6 and Above Post Cap',unit:'EA',price:466.67,mat:150,labor:60,margin:55,tax:'y',cat:'Posts & Columns'},
-  {id:'permits',name:'Permits, Dumpster, Cleanup & Disposal',unit:'EA',price:1038.49,mat:675,labor:0,margin:35,tax:'n',cat:'Misc'},
-  {id:'allperms',name:'All Permits Included',unit:'EA',price:400,mat:180,labor:null,margin:55,tax:'n',cat:'Misc'},
-  {id:'adddump',name:'Additional Dumpster',unit:'EA',price:652.17,mat:300,labor:null,margin:54,tax:'n',cat:'Misc'},
-  {id:'delivery',name:'Delivery to Jobsite',unit:'EA',price:166.67,mat:100,labor:0,margin:40,tax:'n',cat:'Misc'},
-  {id:'spotrepair',name:'Spot Repair',unit:'EA',price:150,mat:null,labor:null,margin:54,tax:'n',cat:'Misc'},
-  {id:'minjob',name:'Min Job / Repair Job — Siding & Roof',unit:'EA',price:888.88,mat:100,labor:300,margin:55,tax:'n',cat:'Misc'},
-  {id:'majormod',name:'Major Modification',unit:'EA',price:1250,mat:500,labor:null,margin:60,tax:'n',cat:'Misc'},
-  {id:'minormod',name:'Minor Modification',unit:'EA',price:636,mat:null,labor:null,margin:50,tax:'n',cat:'Misc'},
-  {id:'pricematch',name:'14-Day Price Match Guarantee',unit:'EA',price:0,mat:0,labor:0,margin:54,tax:'n',cat:'Misc'},
-  {id:'repair',name:'All Repair Jobs — No Warranty',unit:'EA',price:750,mat:null,labor:null,margin:50,tax:'n',cat:'Misc'},
-  {id:'timeline4to6',name:'Time Line is 4 to 6 weeks from final measure',unit:'EA',price:0,mat:0,labor:0,margin:0,tax:'n',cat:'Misc'},
-  {id:'timeline6to8',name:'Time Line is 6 to 8 weeks from final measure',unit:'EA',price:0,mat:0,labor:0,margin:0,tax:'n',cat:'Misc'},
-  {id:'timeline13to17',name:'Time Line is 13 to 17 weeks from final measure — see Terms & Conditions for more details',unit:'EA',price:0,mat:0,labor:0,margin:0,tax:'n',cat:'Misc'},
-];
+let PRODUCTS = [];
 
 // ============================================================
 // COLOR LISTS — dropdown options per product/material
@@ -1228,160 +1100,12 @@ function colorSelect(id, listKey) {
 }
 
 // ============================================================
-// TEMPLATES (hardcoded fallback — overridden by Supabase on load)
+// TEMPLATES — loaded from Supabase after sign-in. No hardcoded fallback,
+// for the same reasons as PRODUCTS above. templates.template_data in the
+// database carries the complete definition (colorFields, description,
+// dimItems, fixedItems, pitchItems, warranty, proposalTheme, ...).
 // ============================================================
-let TEMPLATES = {
-  'gaf-hdz': {
-    id: 'gaf-hdz', name: 'GAF HDZ', label: 'GAF HDZ Shingles', type: 'roof', timeline: '4 to 6 weeks from final measure',
-    mainProductId: 'gafhz',
-    description: 'GAF HDZ shingles offer a combination of beauty and benefits that go beyond any other GAF shingle. The GAF Warranty is available with the installation of GAF Timberline HDZ Shingles and the addition of 4+ components of the GAF Lifetime Roofing System.\n\nAdvantage size, synthetic underlayment to protect the sheeting. Ice and water shield installed 6 ft from the edge (2 layers) and 3 ft in the valley and all new drip edge.\n\n(2) pieces of wood are included in the job price. If any more need to be replaced, we will document the replacement and an additional charge of $65 per sheet will be added to the balance due.',
-    warrantyBase: 'Lifetime product guarantee on shingles. 10 years manufacturer-backed workmanship coverage.',
-    warranty: 'GAF Master Elite Lifetime Warranty on Labor and Material — transferable for 50 years prorated to next homeowner.',
-    colorFields: [
-      {id:'shingleColor',  label:'Shingle Color',            options:'shingle_gaf'},
-      {id:'dripEdgeColor', label:'Drip Edge Color',          options:'drip_edge',   hint:'White or Brown'},
-      {id:'flashingColor', label:'Flashing Color',           options:'flashing',    hint:'Black or Brown'},
-    ],
-    fixedItems: ['chimney','pipebo','nails','delivery','permits','timeline4to6'],
-    dimItems: { ridgeLF:'ridge', eaveLF:['f9748aee','leading'], iceWaterLF:'icewater', valleyLF:'step', gutterLF:'gutter5' },
-    pitchItems: { 30:'steep1', 40:'steep2' },
-    layerItem: 'extra',
-  },
-  'iko-cambridge': {
-    id: 'iko-cambridge', name: 'IKO Cambridge', label: 'IKO Cambridge Shingles', type: 'roof', timeline: '4 to 6 weeks from final measure',
-    mainProductId: 'ikocam',
-    description: 'IKO Cambridge laminated architectural roofing shingles — IKO\'s most popular among homeowners and roofing contractors. Available in a wide array of stunning, patented color blends. Cambridge architectural shingles have one of the heaviest mats in the roofing industry for superior weather protection.\n\nAdvantage size, synthetic underlayment to protect the sheeting. Ice and water shield installed 6 ft from the edge (2 layers) and 3 ft in the valley and all new drip edge.\n\n(2) pieces of wood are included in the job price. If any more need to be replaced, an additional charge of $65 per sheet will be added to the balance due.',
-    warranty: '50 Year Manufacturer Material Warranty and 10 Year Craftsmanship Warranty to original homeowner, transferable pro-rated.',
-    colorFields: [
-      {id:'shingleColor',  label:'Shingle Color',            options:'shingle_iko'},
-      {id:'dripEdgeColor', label:'Drip Edge Color',          options:'drip_edge',   hint:'White or Brown'},
-      {id:'flashingColor', label:'Flashing Color',           options:'flashing',    hint:'Black or Brown'},
-    ],
-    fixedItems: ['chimney','pipebo','nails','delivery','permits','timeline4to6'],
-    dimItems: { ridgeLF:'ridge', eaveLF:['f9748aee','leading'], iceWaterLF:'icewater', valleyLF:'step', gutterLF:'gutter5' },
-    pitchItems: { 30:'steep1', 40:'steep2' },
-    layerItem: 'extra',
-  },
-  'metal': {
-    id: 'metal', name: 'Metal R Panel', label: 'Metal Roof (R Panel)', type: 'roof', timeline: '6 to 8 weeks from final measure',
-    mainProductId: '17dbb335',
-    description: 'Metal Roof — R Panel. Fasteners show but will be sealed with stainless steel screws and a sealed Grommet. Metal carries a lifetime warranty and a 10-year no-fade paint warranty.',
-    warranty: 'Lifetime Warranty. 10-year no-fade paint warranty. 25-year transferable pro-rated.',
-    colorFields: [
-      {id:'metalColor', label:'Color Selected', options:'metal_color'},
-    ],
-    fixedItems: ['chimney','pipebo','delivery','permits','timeline6to8'],
-    dimItems: { valleyLF:'step', gutterLF:'gutter6' },
-    pitchItems: { 30:'steep1', 40:'steep2' },
-    layerItem: null,
-  },
-  'roof-comparison': {
-    id: 'roof-comparison', name: 'Roof Comparison', label: 'Roofing — GAF / IKO / Metal', type: 'roof_comparison', timeline: '4 to 8 weeks from final measure',
-    isComparison: true,
-    description: 'Side-by-side roofing comparison — GAF HDZ, IKO Cambridge, and Metal R-Panel presented together so the customer can choose the option that fits their budget and goals.\n\nAdvantage-size synthetic underlayment to protect the sheeting. Ice and water shield installed 6 ft from the edge (2 layers) and 3 ft in the valley, and all new drip edge.\n\n(2) pieces of wood are included in the job price. If any more need to be replaced, we will document the replacement and an additional charge of $65 per sheet will be added to the balance due.',
-    warranty: 'See individual option warranty details below.',
-    colorFields: [
-      {id:'shingleColor',  label:'Shingle Color (GAF / IKO)',   options:'shingle_gaf'},
-      {id:'dripEdgeColor', label:'Drip Edge Color',             options:'drip_edge',  hint:'White or Brown'},
-      {id:'flashingColor', label:'Flashing Color',              options:'flashing',   hint:'Black or Brown'},
-      {id:'metalColor',    label:'Metal Color (Metal option)',  options:'metal_color'},
-    ],
-    fixedItems: ['chimney','pipebo','nails','delivery','permits'],
-    dimItems: { ridgeLF:'ridge', eaveLF:['f9748aee','leading'], iceWaterLF:'icewater', valleyLF:'step', gutterLF:'gutter5' },
-    pitchItems: { 30:'steep1', 40:'steep2' }, layerItem: 'extra',
-    tiers: [
-      { key:'iko',   name:'Option 1 — IKO Cambridge', mainProductId:'ikocam',   layerItem:'extra', pitchItems:{30:'steep1',40:'steep2'}, dimItems:{ ridgeLF:'ridge', eaveLF:['f9748aee','leading'], iceWaterLF:'icewater', valleyLF:'step', gutterLF:'gutter5' }, fixedItems:['chimney','pipebo','nails','delivery','permits','timeline4to6'], warranty:'50 Year Manufacturer Material Warranty and 10 Year Craftsmanship Warranty to original homeowner, transferable pro-rated.' },
-      { key:'gaf',   name:'Option 2 — GAF HDZ',       mainProductId:'gafhz',    layerItem:'extra', pitchItems:{30:'steep1',40:'steep2'}, dimItems:{ ridgeLF:'ridge', eaveLF:['f9748aee','leading'], iceWaterLF:'icewater', valleyLF:'step', gutterLF:'gutter5' }, fixedItems:['chimney','pipebo','nails','delivery','permits','timeline4to6'], warranty:'GAF Master Elite Lifetime Warranty on Labor and Material — transferable for 50 years prorated to next homeowner.' },
-      { key:'metal', name:'Option 3 — Metal R-Panel', mainProductId:'17dbb335', layerItem:null,    pitchItems:{30:'steep1',40:'steep2'}, dimItems:{ valleyLF:'step', gutterLF:'gutter6' }, fixedItems:['chimney','pipebo','delivery','permits','timeline6to8'], warranty:'Lifetime Warranty. 10-year no-fade paint warranty. 25-year transferable pro-rated.' },
-    ],
-  },
-  'ody-housewrap': {
-    id: 'ody-housewrap', name: 'Ody Plus .044 House Wrap', label: 'Odyssey Plus .044 w/ House Wrap', type: 'siding', timeline: '13 to 17 weeks from final measure',
-    mainProductId: 'odysseywrap',
-    description: 'Odyssey Plus Standard Colors only — .044 panel thickness with House Wrap. Secure Lock advanced Rollover nail hem for superior rigidity. Extra strong rollover nail hem with double row slot.\n\nPremium Dark colors will only carry the Manufacturer\'s Lifetime Warranty. Renew Home Exteriors recommends Charter Oak .046 thickness in premium darker colors.\n\n*Mounting blocks will be in the same color as the siding color chosen.',
-    warranty: '10-year labor warranty on standard colors only. Lifetime Manufacturer Warranty. *See warranty for complete details.',
-    colorFields: [
-      {id:'sidingStyle',       label:'Siding Style',                  options:'siding_style', hint:'DL or Straight Lap'},
-      {id:'sidingColor',       label:'Siding Color',                  options:'siding_ody'},
-      {id:'cornerPostColor',   label:'Corner Post Color',             options:'siding_ody'},
-      {id:'soffitColor',       label:'Vinyl Soffit Color',            options:'trim'},
-      {id:'faciaColor',        label:'Aluminum Fascia Wrap Color',    options:'trim'},
-      {id:'windowCapColor',    label:'Full Window Cap Color',         options:'trim'},
-      {id:'doorCapColor',      label:'Entry / Patio Door Cap Color',  options:'trim'},
-      {id:'garageDoorCapColor',label:'Garage Door Cap Color',         options:'trim'},
-      {id:'gutterColor',       label:'Gutter Color',                  options:'gutter'},
-    ],
-    fixedItems: ['sidfastn','delivery','permits','timeline13to17'],
-    dimItems: { sidingCorners:'sidcorn', fasciaLF:'facia', soffitSQ:'vinylsoffit', gutterLF:'gutter5' },
-    pitchItems: {}, layerItem: null,
-  },
-  'ody-polar': {
-    id: 'ody-polar', name: 'Ody Plus .044 3/8 Polar Board', label: 'Odyssey Plus .044 w/ 3/8 Polar Board', type: 'siding', timeline: '13 to 17 weeks from final measure',
-    mainProductId: 'odyssey',
-    description: 'Odyssey Plus Standard Colors only — .044 panel thickness with 3/8 polar board. Secure Lock advanced Rollover nail hem for superior rigidity. Extra strong rollover nail hem with double row slot.\n\nPremium Dark colors will only carry the Manufacturer\'s Lifetime Warranty. Renew Home Exteriors recommends Charter Oak .046 thickness in premium darker colors.\n\n*Mounting blocks will be in the same color as the siding color chosen.',
-    warranty: '10-year labor warranty on standard colors only. Lifetime Manufacturer Warranty. *See warranty for complete details.',
-    colorFields: [
-      {id:'sidingStyle',       label:'Siding Style',                  options:'siding_style', hint:'DL or Straight Lap'},
-      {id:'sidingColor',       label:'Siding Color',                  options:'siding_ody'},
-      {id:'cornerPostColor',   label:'Corner Post Color',             options:'siding_ody'},
-      {id:'soffitColor',       label:'Vinyl Soffit Color',            options:'trim'},
-      {id:'faciaColor',        label:'Aluminum Fascia Wrap Color',    options:'trim'},
-      {id:'windowCapColor',    label:'Full Window Cap Color',         options:'trim'},
-      {id:'doorCapColor',      label:'Entry / Patio Door Cap Color',  options:'trim'},
-      {id:'garageDoorCapColor',label:'Garage Door Cap Color',         options:'trim'},
-      {id:'gutterColor',       label:'Gutter Color',                  options:'gutter'},
-    ],
-    fixedItems: ['sidfastn','delivery','permits','timeline13to17'],
-    dimItems: { sidingCorners:'sidcorn', fasciaLF:'facia', soffitSQ:'vinylsoffit', gutterLF:'gutter5' },
-    pitchItems: {}, layerItem: null,
-  },
-  'charter-oak': {
-    id: 'charter-oak', name: 'Charter Oak .046', label: 'Charter Oak Premium .046', type: 'siding', timeline: '13 to 17 weeks from final measure',
-    mainProductId: '590da916',
-    description: 'Charter Oak Premium Siding — .046 premium panel thickness with 3/8 Insulation polar board. Rollover nail hem gives Charter Oak its superior ability to resist the force of extreme winds. Exclusive Tri Beam design gives Charter Oak superior strength, up to five times more rigid than the competition. Charter Oak siding has been independently tested to withstand Category 5 hurricane-force winds.\n\n*Mounting blocks will be in the same color as the siding.',
-    warranty: 'Lifetime Warranty Parts and Labor. 25-year transferable pro-rated.',
-    colorFields: [
-      {id:'sidingStyle',       label:'Siding Style',                  options:'siding_style',   hint:'DL or Straight Lap'},
-      {id:'sidingColor',       label:'Siding Color',                  options:'siding_charter'},
-      {id:'cornerPostColor',   label:'Corner Post Color',             options:'siding_charter'},
-      {id:'soffitColor',       label:'Vinyl Soffit Color',            options:'trim'},
-      {id:'porchSoffitColor',  label:'Porch Solid Vinyl Soffit Color',options:'trim'},
-      {id:'faciaColor',        label:'Aluminum Fascia Wrap Color',    options:'trim'},
-      {id:'windowCapColor',    label:'Full Window Cap Color',         options:'trim'},
-      {id:'doorCapColor',      label:'Entry / Patio Door Cap Color',  options:'trim'},
-      {id:'garageDoorCapColor',label:'Garage Door Cap Color',         options:'trim'},
-      {id:'gutterColor',       label:'Gutter Color',                  options:'gutter'},
-    ],
-    fixedItems: ['sidfastn','delivery','permits','timeline13to17'],
-    dimItems: { sidingCorners:'sidcorn', fasciaLF:'facia', soffitSQ:'vinylsoffit', gutterLF:'gutter5' },
-    pitchItems: {}, layerItem: null,
-  },
-  'alside-comparison': {
-    id: 'alside-comparison', name: 'Alside Comparison', label: 'Alside Siding — 3-Tier Comparison', type: 'alside_comparison', timeline: '13 to 17 weeks from final measure',
-    isComparison: true,
-    description: 'Side-by-side Alside siding comparison — three options presented in order so the customer can choose the level that fits their budget and goals.\n\n*Mounting blocks will be in the same color as the siding color chosen.',
-    warranty: 'See individual option warranty details below.',
-    colorFields: [
-      {id:'sidingStyle',       label:'Siding Style',                  options:'siding_style', hint:'DL or Straight Lap'},
-      {id:'sidingColor',       label:'Siding Color',                  options:'siding_ody'},
-      {id:'cornerPostColor',   label:'Corner Post Color',             options:'siding_ody'},
-      {id:'soffitColor',       label:'Vinyl Soffit Color',            options:'trim'},
-      {id:'faciaColor',        label:'Aluminum Fascia Wrap Color',    options:'trim'},
-      {id:'windowCapColor',    label:'Full Window Cap Color',         options:'trim'},
-      {id:'doorCapColor',      label:'Entry / Patio Door Cap Color',  options:'trim'},
-      {id:'garageDoorCapColor',label:'Garage Door Cap Color',         options:'trim'},
-      {id:'gutterColor',       label:'Gutter Color',                  options:'gutter'},
-    ],
-    fixedItems: ['sidfastn','delivery','permits','timeline13to17'],
-    dimItems: { sidingCorners:'sidcorn', fasciaLF:'facia', soffitSQ:'vinylsoffit', gutterLF:'gutter5' },
-    pitchItems: {}, layerItem: null,
-    tiers: [
-      { key:'housewrap',  name:'Option 1 — House Wrap (.044)',        mainProductId:'odysseywrap', warranty:'10-year labor warranty on standard colors only. Lifetime Manufacturer Warranty. *See warranty for complete details.' },
-      { key:'polarboard', name:'Option 2 — Polar Board (.044 + 3/8")',mainProductId:'odyssey',     warranty:'10-year labor warranty on standard colors only. Lifetime Manufacturer Warranty. *See warranty for complete details.' },
-      { key:'charteroak', name:'Option 3 — Charter Oak (.046)',       mainProductId:'590da916',    warranty:'Lifetime Warranty Parts and Labor. 25-year transferable pro-rated.' },
-    ],
-  },
-};
+let TEMPLATES = {};
 
 // ============================================================
 // STATE
@@ -1584,46 +1308,98 @@ async function bootAppData() {
 }
 
 async function loadProductsFromDB() {
-  if (!currentSession) return;   // never fetch the catalog (incl. cost/margin) without a session
+  if (!currentSession) return false;   // never fetch the catalog without a session
   try {
     const res = await fetch(
       SUPABASE_URL + '/rest/v1/products?select=id,name,unit,price,mat,labor,margin,tax,cat&active=eq.true&order=sort_order.asc',
       { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + currentSession.access_token } }
     );
-    if (!res.ok) throw new Error('HTTP ' + res.status);
+    if (!res.ok) return dataLoadFailed('Price book', 'the server returned HTTP ' + res.status);
     const data = await res.json();
-    if (data && data.length > 0) {
-      PRODUCTS = data.map(p => ({
-        id: p.id, name: p.name, unit: p.unit,
-        price: parseFloat(p.price) || 0,
-        mat: p.mat != null ? parseFloat(p.mat) : null,
-        labor: p.labor != null ? parseFloat(p.labor) : null,
-        margin: p.margin != null ? parseFloat(p.margin) : null,
-        tax: p.tax, cat: p.cat
-      }));
-      filteredProducts = [...PRODUCTS];
-      document.querySelector('.status-bar span').innerHTML =
-        '<span class="status-dot"></span> Live Pricing — ' + PRODUCTS.length + ' Products';
-    }
-  } catch(e) { console.warn('Supabase products load failed, using hardcoded fallback.', e); }
+    if (!Array.isArray(data)) return dataLoadFailed('Price book', 'the response was not a list');
+    if (data.length === 0)    return dataLoadFailed('Price book', 'your account has no access to it');
+    PRODUCTS = data.map(p => ({
+      id: p.id, name: p.name, unit: p.unit,
+      price:  parseFloat(p.price) || 0,
+      mat:    p.mat    != null ? parseFloat(p.mat)    : null,
+      labor:  p.labor  != null ? parseFloat(p.labor)  : null,
+      margin: p.margin != null ? parseFloat(p.margin) : null,
+      tax: p.tax, cat: p.cat
+    }));
+    filteredProducts = [...PRODUCTS];
+    setPricingStatus('Live Pricing — ' + PRODUCTS.length + ' Products', true);
+    return true;
+  } catch (e) {
+    return dataLoadFailed('Price book', 'the server could not be reached', e);
+  }
 }
 
 async function loadTemplatesFromDB() {
-  if (!currentSession) return;   // templates load only after sign-in
+  if (!currentSession) return false;   // templates load only after sign-in
+  let ok = false;
   try {
     const res = await fetch(
       SUPABASE_URL + '/rest/v1/templates?select=id,name,template_data&active=eq.true&order=sort_order.asc',
       { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + currentSession.access_token } }
     );
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    if (data && data.length > 0) {
-      const newTemplates = {};
-      data.forEach(t => { newTemplates[t.id] = t.template_data; });
-      TEMPLATES = newTemplates;
+    if (!res.ok) {
+      dataLoadFailed('Templates', 'the server returned HTTP ' + res.status);
+    } else {
+      const data = await res.json();
+      if (!Array.isArray(data)) {
+        dataLoadFailed('Templates', 'the response was not a list');
+      } else if (data.length === 0) {
+        dataLoadFailed('Templates', 'your account has no access to them');
+      } else {
+        const newTemplates = {};
+        data.forEach(t => { newTemplates[t.id] = t.template_data; });
+        TEMPLATES = newTemplates;
+        ok = true;
+      }
     }
-  } catch(e) { console.warn('Supabase templates load failed, using hardcoded fallback.', e); }
+  } catch (e) {
+    dataLoadFailed('Templates', 'the server could not be reached', e);
+  }
   renderTemplateGrid();
+  return ok;
+}
+
+// ── Data-load status and failure reporting ───────────────────────────────
+// With no hardcoded catalog behind it, a failed or empty load has to be
+// visible. It used to be silent: an access-denied response left the built-in
+// arrays in place and the app looked fully populated and live.
+function setPricingStatus(text, ok) {
+  const el = document.getElementById('statusPricing');
+  if (el) el.innerHTML = '<span class="status-dot" style="background:' +
+    (ok ? '#4caf50' : '#e53935') + '"></span> ' + text;
+}
+
+const _dataLoadProblems = [];
+function dataLoadFailed(what, reason, err) {
+  console.error('[data load] ' + what + ': ' + reason, err || '');
+  const line = what + ' could not be loaded — ' + reason + '.';
+  if (_dataLoadProblems.indexOf(line) === -1) _dataLoadProblems.push(line);
+  setPricingStatus('Live data not loaded', false);
+  const b = document.getElementById('dataLoadBanner');
+  if (b) {
+    b.innerHTML = '<strong>This estimator is not showing live data.</strong> ' +
+      _dataLoadProblems.join(' ') +
+      ' Nothing shown below reflects current pricing, so do not quote from it. ' +
+      'If your account was recently deactivated, or has not been assigned to an ' +
+      'organization, contact an administrator. ' +
+      '<button type="button" onclick="retryDataLoad()">Retry</button>';
+    b.hidden = false;
+  }
+  return false;
+}
+
+async function retryDataLoad() {
+  _dataLoadProblems.length = 0;
+  const b = document.getElementById('dataLoadBanner');
+  if (b) b.hidden = true;
+  setPricingStatus('Pricing — loading…', true);
+  _appBooted = false;
+  await bootAppData();
 }
 
 function renderTemplateGrid() {
