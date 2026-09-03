@@ -1001,7 +1001,17 @@ const SIGNING_SITE_URL = 'https://sign.renewhomeexteriors.com'; // static signin
 const _supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ── Google Places address autocomplete (browser key, referrer-restricted to your domain) ──
-const GOOGLE_MAPS_KEY = 'AIzaSyCt4XlZWWWzwWupPhVy0Vqiap83rf9plns';  // <-- paste your restricted Places/Maps-JS browser key here
+const GOOGLE_MAPS_KEY = 'AIzaSyCQ8HeZ3U2s8Kx6wTJCuDOR65ZoCpdaADU';  // Renew's own browser key
+// Browser keys are visible in page source by design; the protection is the key's own
+// restrictions in Google Cloud, not secrecy. Locked to:
+//   https://renewestimator.netlify.app/*
+//   https://estimator.renewhomeexteriors.com/*
+// Netlify deploy previews are NOT covered: Google requires a referrer wildcard to be
+// a complete subdomain label, so "*--renewestimator.netlify.app" is rejected. Add a
+// preview host literally if you need one. Never use "*.netlify.app" -- that would
+// authorise every site on Netlify to spend this key's quota.
+// APIs: Maps JavaScript API + Places API (New). Keep both lists in step with the
+// hosts this page is actually served from, or autocomplete silently stops working.
 function loadGoogleAutocomplete() {
   if (!GOOGLE_MAPS_KEY || GOOGLE_MAPS_KEY.indexOf('YOUR_') === 0) return; // not configured yet
   if (window.google && google.maps && google.maps.importLibrary) { initGoogleAutocomplete(); return; }
