@@ -792,6 +792,34 @@ function dbFetch(path, opts = {}) {
   return fetch(SUPABASE_URL + path, { ...opts, headers });
 }
 
+// A PostgREST write that matches NO rows still succeeds at the HTTP level:
+// with `Prefer: return=minimal` it answers 204, so res.ok was true and the UI
+// reported success for writes RLS had silently refused. This asks for the
+// affected rows back and treats "nothing changed" as the failure it is.
+// Returns { ok, rows, error }.
+// allowEmpty: for writes where matching zero rows is a valid outcome, e.g.
+// clearing a provider's plans when it has none yet.
+async function dbWrite(path, opts = {}) {
+  const { allowEmpty = false, ...rest } = opts;
+  const res = await dbFetch(path, {
+    ...rest,
+    headers: { ...(rest.headers || {}), 'Prefer': 'return=representation' }
+  });
+  if (!res.ok) {
+    let msg = res.status + ' ' + res.statusText;
+    try { const j = await res.json(); if (j && j.message) msg = j.message; } catch (e) {}
+    return { ok: false, rows: [], error: msg };
+  }
+  let rows;
+  try { rows = await res.json(); } catch (e) { rows = []; }
+  if (!Array.isArray(rows)) rows = rows ? [rows] : [];
+  if (rows.length === 0 && !allowEmpty) {
+    return { ok: false, rows: [],
+             error: 'nothing was changed \u2014 your account may not have permission' };
+  }
+  return { ok: true, rows: rows, error: null };
+}
+
 function showTab(name) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -932,20 +960,18 @@ async function saveProduct() {
 
   if (id) {
     // Update
-    const res = await dbFetch('/rest/v1/products?id=eq.' + id, {
-      method: 'PATCH', body: JSON.stringify(payload),
-      headers: { 'Prefer': 'return=minimal' }
+    const r = await dbWrite('/rest/v1/products?id=eq.' + id, {
+      method: 'PATCH', body: JSON.stringify(payload)
     });
-    if (!res.ok) { toast('Save failed: ' + res.status, true); return; }
+    if (!r.ok) { toast('Save failed — ' + r.error, true); return; }
     toast('Product updated ✓');
   } else {
     // Insert — generate a short UUID-style ID
     payload.id = crypto.randomUUID().split('-')[0] + crypto.randomUUID().split('-')[0];
-    const res = await dbFetch('/rest/v1/products', {
-      method: 'POST', body: JSON.stringify(payload),
-      headers: { 'Prefer': 'return=minimal' }
+    const r = await dbWrite('/rest/v1/products', {
+      method: 'POST', body: JSON.stringify(payload)
     });
-    if (!res.ok) { toast('Add failed: ' + res.status, true); return; }
+    if (!r.ok) { toast('Add failed — ' + r.error, true); return; }
     toast('Product added ✓');
   }
   closeModal('productModal');
@@ -953,12 +979,11 @@ async function saveProduct() {
 }
 
 async function toggleActive(id, newActive) {
-  const res = await dbFetch('/rest/v1/products?id=eq.' + id, {
+  const r = await dbWrite('/rest/v1/products?id=eq.' + id, {
     method: 'PATCH',
-    body: JSON.stringify({ active: newActive }),
-    headers: { 'Prefer': 'return=minimal' }
+    body: JSON.stringify({ active: newActive })
   });
-  if (!res.ok) { toast('Update failed', true); return; }
+  if (!r.ok) { toast('Update failed — ' + r.error, true); loadProducts(); return; }
   toast(newActive ? 'Product activated ✓' : 'Product deactivated ✓');
   loadProducts();
 }
@@ -974,17 +999,20 @@ async function applyBulkPrice() {
   const factor = op === 'increase' ? (1 + pct / 100) : (1 - pct / 100);
   const targets = allProducts.filter(p => (!cat || p.cat === cat) && p.active);
 
-  let ok = 0;
+  let ok = 0, lastErr = null;
   for (const p of targets) {
     const newPrice = Math.round(parseFloat(p.price) * factor * 100) / 100;
-    const res = await dbFetch('/rest/v1/products?id=eq.' + p.id, {
+    const r = await dbWrite('/rest/v1/products?id=eq.' + p.id, {
       method: 'PATCH',
-      body: JSON.stringify({ price: newPrice }),
-      headers: { 'Prefer': 'return=minimal' }
+      body: JSON.stringify({ price: newPrice })
     });
-    if (res.ok) ok++;
+    if (r.ok) ok++; else lastErr = r.error;
   }
-  toast(`Updated ${ok} of ${targets.length} products ✓`);
+  if (ok < targets.length) {
+    toast(`Updated ${ok} of ${targets.length} — ` + (lastErr || 'some writes were refused'), true);
+  } else {
+    toast(`Updated ${ok} of ${targets.length} products ✓`);
+  }
   closeModal('bulkModal');
   loadProducts();
 }
@@ -1270,24 +1298,22 @@ async function saveTemplate() {
 
   if (id) {
     // Update
-    const res = await dbFetch('/rest/v1/templates?id=eq.' + id, {
+    const r = await dbWrite('/rest/v1/templates?id=eq.' + id, {
       method: 'PATCH',
-      body: JSON.stringify({ name, template_data }),
-      headers: { 'Prefer': 'return=minimal' }
+      body: JSON.stringify({ name, template_data })
     });
-    if (!res.ok) { toast('Save failed: ' + res.status, true); return; }
+    if (!r.ok) { toast('Save failed — ' + r.error, true); return; }
     toast('Template saved ✓');
   } else {
     // Insert
-    const res = await dbFetch('/rest/v1/templates', {
+    const r = await dbWrite('/rest/v1/templates', {
       method: 'POST',
       body: JSON.stringify({
         id: slug, name, template_data, active: true,
         tenant_id: '5249f9c0-9fca-46c8-896c-4e35be437024', sort_order: 99
-      }),
-      headers: { 'Prefer': 'return=minimal' }
+      })
     });
-    if (!res.ok) { toast('Add failed: ' + res.status, true); return; }
+    if (!r.ok) { toast('Add failed — ' + r.error, true); return; }
     toast('Template created ✓');
   }
   closeModal('templateModal');
@@ -1400,28 +1426,26 @@ async function sendInvite() {
 async function editUserPhone(id, current) {
   const ph = prompt('Update phone number:', current);
   if (ph === null) return;
-  const res = await dbFetch('/rest/v1/users?id=eq.' + id, {
-    method: 'PATCH', body: JSON.stringify({ phone: ph }),
-    headers: { 'Prefer': 'return=minimal' }
+  const r = await dbWrite('/rest/v1/users?id=eq.' + id, {
+    method: 'PATCH', body: JSON.stringify({ phone: ph })
   });
-  toast(res.ok ? 'Phone updated ✓' : 'Update failed', !res.ok);
-  if (res.ok) loadUsers();
+  toast(r.ok ? 'Phone updated ✓' : 'Update failed — ' + r.error, !r.ok);
+  loadUsers();
 }
 
 async function updateUserRole(id, role) {
-  const res = await dbFetch('/rest/v1/users?id=eq.' + id, {
-    method: 'PATCH', body: JSON.stringify({ role }),
-    headers: { 'Prefer': 'return=minimal' }
+  const r = await dbWrite('/rest/v1/users?id=eq.' + id, {
+    method: 'PATCH', body: JSON.stringify({ role })
   });
-  toast(res.ok ? 'Role updated ✓' : 'Update failed', !res.ok);
+  toast(r.ok ? 'Role updated ✓' : 'Update failed — ' + r.error, !r.ok);
+  if (!r.ok) loadUsers();   // put the dropdown back to the stored value
 }
 
 async function updateUserActive(id, active) {
-  const res = await dbFetch('/rest/v1/users?id=eq.' + id, {
-    method: 'PATCH', body: JSON.stringify({ active }),
-    headers: { 'Prefer': 'return=minimal' }
+  const r = await dbWrite('/rest/v1/users?id=eq.' + id, {
+    method: 'PATCH', body: JSON.stringify({ active })
   });
-  if (!res.ok) { toast('Update failed', true); return; }
+  if (!r.ok) { toast('Update failed — ' + r.error, true); loadUsers(); return; }
   toast(active ? 'User activated ✓' : 'User deactivated ✓');
   loadUsers();
 }
@@ -1584,11 +1608,10 @@ async function saveProvider() {
     // Update existing provider
     const payload = { name, notes, active };
     if (logo_url) { payload.logo_url = logo_url; payload.logo_storage_path = logo_storage_path; }
-    const res = await dbFetch('/rest/v1/financing_providers?id=eq.' + id, {
-      method: 'PATCH', body: JSON.stringify(payload),
-      headers: { 'Prefer': 'return=minimal' }
+    const r = await dbWrite('/rest/v1/financing_providers?id=eq.' + id, {
+      method: 'PATCH', body: JSON.stringify(payload)
     });
-    if (!res.ok) { toast('Save failed: ' + res.status, true); return; }
+    if (!r.ok) { toast('Save failed — ' + r.error, true); return; }
   } else {
     // Insert new provider
     const payload = {
@@ -1596,20 +1619,19 @@ async function saveProvider() {
       name, notes, active, sort_order: 99
     };
     if (logo_url) { payload.logo_url = logo_url; payload.logo_storage_path = logo_storage_path; }
-    const res = await dbFetch('/rest/v1/financing_providers', {
-      method: 'POST', body: JSON.stringify(payload),
-      headers: { 'Prefer': 'return=representation' }
+    const r = await dbWrite('/rest/v1/financing_providers', {
+      method: 'POST', body: JSON.stringify(payload)
     });
-    if (!res.ok) { toast('Add failed: ' + res.status, true); return; }
-    const row = await res.json();
-    providerId = row[0]?.id;
+    if (!r.ok) { toast('Add failed — ' + r.error, true); return; }
+    providerId = r.rows[0]?.id;
   }
 
   // Sync plans: delete all existing, re-insert
   if (providerId) {
-    await dbFetch('/rest/v1/financing_plans?provider_id=eq.' + providerId, {
-      method: 'DELETE', headers: { 'Prefer': 'return=minimal' }
+    const rDel = await dbWrite('/rest/v1/financing_plans?provider_id=eq.' + providerId, {
+      method: 'DELETE', allowEmpty: true
     });
+    if (!rDel.ok) { toast('Could not clear existing plans — ' + rDel.error, true); return; }
     if (editingPlans.length) {
       const planRows = editingPlans.map((pl, i) => ({
         provider_id:  providerId,
@@ -1620,10 +1642,10 @@ async function saveProvider() {
         active:       pl.active !== false,
         sort_order:   i + 1
       }));
-      await dbFetch('/rest/v1/financing_plans', {
-        method: 'POST', body: JSON.stringify(planRows),
-        headers: { 'Prefer': 'return=minimal' }
+      const rIns = await dbWrite('/rest/v1/financing_plans', {
+        method: 'POST', body: JSON.stringify(planRows)
       });
+      if (!rIns.ok) { toast('Plans were not saved — ' + rIns.error, true); return; }
     }
   }
 
@@ -1733,11 +1755,10 @@ async function uploadPDF() {
 }
 
 async function togglePDFActive(id, active) {
-  const res = await dbFetch('/rest/v1/pdf_library?id=eq.' + id, {
-    method: 'PATCH', body: JSON.stringify({ active }),
-    headers: { 'Prefer': 'return=minimal' }
+  const r = await dbWrite('/rest/v1/pdf_library?id=eq.' + id, {
+    method: 'PATCH', body: JSON.stringify({ active })
   });
-  if (!res.ok) { toast('Update failed', true); return; }
+  if (!r.ok) { toast('Update failed — ' + r.error, true); loadPDFLibrary(); return; }
   toast(active ? 'PDF activated ✓' : 'PDF deactivated ✓');
   const pdf = allPDFs.find(p => p.id === id);
   if (pdf) pdf.active = active;
@@ -1757,10 +1778,10 @@ async function deletePDF(id, storagePath) {
   });
 
   // 2. Remove DB record
-  const res = await dbFetch('/rest/v1/pdf_library?id=eq.' + id, {
-    method: 'DELETE', headers: { 'Prefer': 'return=minimal' }
+  const r = await dbWrite('/rest/v1/pdf_library?id=eq.' + id, {
+    method: 'DELETE'
   });
-  if (!res.ok) { toast('Delete failed', true); return; }
+  if (!r.ok) { toast('Delete failed — ' + r.error, true); return; }
   toast('PDF deleted');
   allPDFs = allPDFs.filter(p => p.id !== id);
   renderPDFLibrary();

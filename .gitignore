@@ -3,6 +3,8 @@ node_modules/
 
 # Environment / secrets
 .env
+client_secret*.json
+*credentials*.json
 .env.local
 *.env
 
